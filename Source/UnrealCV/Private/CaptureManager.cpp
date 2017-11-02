@@ -29,6 +29,12 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 	RightEye->SetRelativeLocation(FVector(0, 40, 0));
 	// RightEye->AddLocalOffset(FVector(0, 40, 0)); // TODO: make this configurable
 	CaptureComponentList.Add(RightEye);
+
+	
+	UGTCaptureComponent* MainMonitor = UGTCameraCaptureComponent::Create(Pawn, Pawn->GetController()->GetViewTarget(), SupportedModes);
+	// RightEye->AddLocalOffset(FVector(0, 40, 0)); // TODO: make this configurable
+	CaptureComponentList.Add(MainMonitor);
+	
 }
 
 UGTCaptureComponent* FCaptureManager::GetCamera(int32 CameraId)

@@ -132,6 +132,7 @@ UGTCaptureComponent* UGTCaptureComponent::Create(APawn* InPawn, TArray<FString> 
 	{
 		// DEPRECATED_FORGAME(4.6, "CaptureComponent2D should not be accessed directly, please use GetCaptureComponent2D() function instead. CaptureComponent2D will soon be private and your code will not compile.")
 		USceneCaptureComponent2D* CaptureComponent = NewObject<USceneCaptureComponent2D>();
+
 		CaptureComponent->bIsActive = false; // Disable it by default for performance consideration
 		GTCapturer->CaptureComponents.Add(Mode, CaptureComponent);
 
@@ -261,6 +262,33 @@ void UGTCaptureComponent::CaptureFloat16Image(const FString& Mode, TArray<FFloat
 	return;
 }
 
+void UGTCaptureComponent::GetFieldOfView(const FString& Mode, float& FOV)
+{
+	USceneCaptureComponent2D* CaptureComponent = CaptureComponents.FindRef(Mode);
+	if (CaptureComponent == nullptr)
+	{
+		UE_LOG(LogUnrealCV, Warning, TEXT("Can not find a camera to capture %s"), *Mode);
+		return;
+	}
+
+	FOV = CaptureComponent->FOVAngle;
+	return;
+}
+
+void UGTCaptureComponent::GetSize(const FString& Mode, int32& Width, int32& Height)
+{
+	USceneCaptureComponent2D* CaptureComponent = CaptureComponents.FindRef(Mode);
+	if (CaptureComponent == nullptr)
+	{
+		UE_LOG(LogUnrealCV, Warning, TEXT("Can not find a camera to capture %s"), *Mode);
+		return;
+	}
+
+	Width = CaptureComponent->TextureTarget->SizeX;
+	Height = CaptureComponent->TextureTarget->SizeY;
+	return;
+}
+
 void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 // void UGTCaptureComponent::Tick(float DeltaTime) // This tick function should be called by the scene instead of been
 {
@@ -319,5 +347,111 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 			}
 		}
 		Task.AsyncRecord->bIsCompleted = true;
+	}
+}
+
+
+
+
+UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AActor* InCameraActor, TArray<FString> Modes)
+{
+	UWorld* World = FUE4CVServer::Get().GetGameWorld();
+	UGTCameraCaptureComponent* GTCapturer = NewObject<UGTCameraCaptureComponent>();
+
+	GTCapturer->bIsActive = true;
+	// check(GTCapturer->IsComponentTickEnabled() == true);
+	GTCapturer->Pawn = InPawn;
+	GTCapturer->CameraActor = InCameraActor; // This GTCapturer should depend on the Pawn and be released together with the Pawn.
+	GTCapturer->CameraComponent = Cast<UCameraComponent>(GTCapturer->CameraActor->GetComponentByClass(UCameraComponent::StaticClass()));
+
+							   // This snippet is from Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp, AttachTo
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::KeepRelative, false);
+	ConvertAttachLocation(EAttachLocation::KeepRelativeOffset, AttachmentRules.LocationRule, AttachmentRules.RotationRule, AttachmentRules.ScaleRule);
+	GTCapturer->AttachToComponent(InCameraActor->GetRootComponent(), AttachmentRules);
+	// GTCapturer->AddToRoot();
+	GTCapturer->RegisterComponentWithWorld(World);
+	GTCapturer->SetTickableWhenPaused(true);
+
+	for (FString Mode : Modes)
+	{
+		// DEPRECATED_FORGAME(4.6, "CaptureComponent2D should not be accessed directly, please use GetCaptureComponent2D() function instead. CaptureComponent2D will soon be private and your code will not compile.")
+		USceneCaptureComponent2D* CaptureComponent = NewObject<USceneCaptureComponent2D>();
+
+		CaptureComponent->bIsActive = false; // Disable it by default for performance consideration
+		GTCapturer->CaptureComponents.Add(Mode, CaptureComponent);
+
+		// CaptureComponent needs to be attached to somewhere immediately, otherwise it will be gc-ed
+
+		CaptureComponent->AttachToComponent(GTCapturer, AttachmentRules);
+		InitCaptureComponent(CaptureComponent);
+
+		UMaterial* Material = GetMaterial(Mode);
+		if (Mode == "lit") // For rendered images
+		{
+			// FViewMode::Lit(CaptureComponent->ShowFlags);
+			CaptureComponent->TextureTarget->TargetGamma = GEngine->GetDisplayGamma();
+			// float DisplayGamma = SceneViewport->GetDisplayGamma();
+		}
+		else if (Mode == "default")
+		{
+			continue;
+		}
+		else // for ground truth
+		{
+			CaptureComponent->TextureTarget->TargetGamma = 1;
+			if (Mode == "object_mask") // For object mask
+			{
+				// FViewMode::Lit(CaptureComponent->ShowFlags);
+				FViewMode::VertexColor(CaptureComponent->ShowFlags);
+			}
+			else if (Mode == "wireframe") // For object mask
+			{
+				FViewMode::Wireframe(CaptureComponent->ShowFlags);
+			}
+			else
+			{
+				check(Material);
+				// GEngine->GetDisplayGamma(), the default gamma is 2.2
+				// CaptureComponent->TextureTarget->TargetGamma = 2.2;
+				FViewMode::PostProcess(CaptureComponent->ShowFlags);
+
+				CaptureComponent->PostProcessSettings.AddBlendable(Material, 1);
+				// Instead of switching post-process materials, we create several SceneCaptureComponent, so that we can capture different GT within the same frame.
+			}
+		}
+	}
+	return GTCapturer;
+}
+
+void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+// void UGTCaptureComponent::Tick(float DeltaTime) // This tick function should be called by the scene instead of been
+{
+	// Render pixels out in the next tick. To allow time to render images out.
+
+	// Update rotation of each frame
+	// from ab237f46dc0eee40263acbacbe938312eb0dffbb:CameraComponent.cpp:232
+	check(this->Pawn); // this GTCapturer should be released, if the Pawn is deleted.
+	check(this->CameraActor);
+	check(this->CameraComponent); // this GTCapturer should be released, if the Pawn is deleted.
+	const APawn* OwningPawn = this->Pawn;
+	const AActor* OwningCamera = this->CameraActor;
+	const AController* OwningController = OwningCamera ? OwningPawn->GetController() : nullptr;
+	if (OwningController && OwningController->IsLocalPlayerController())
+	{
+		const FRotator CameraViewRotation = CameraComponent->GetComponentRotation();
+		const FVector CameraViewLocation = CameraComponent->GetComponentLocation();
+		for (auto Elem : CaptureComponents)
+		{
+			USceneCaptureComponent2D* CaptureComponent = Elem.Value;
+			if (!CameraViewRotation.Equals(CaptureComponent->GetComponentRotation()))
+			{
+				CaptureComponent->SetWorldRotation(CameraViewRotation);
+			}
+			if (!CameraViewLocation.Equals(CaptureComponent->GetComponentLocation()))
+			{
+				CaptureComponent->SetWorldLocation(CameraViewLocation);
+			}
+
+		}
 	}
 }

@@ -2,9 +2,13 @@
 #include "Serialization.h"
 #include "ImageWrapper.h"
 #include "cnpy.h"
+#include <chrono>  // for high_resolution_clock
 
 TArray<uint8> SerializationUtils::Array2Npy(const TArray<FFloat16Color>& ImageData, int32 Width, int32 Height, int32 Channel)
 {
+	// Record start time
+	auto start = std::chrono::high_resolution_clock::now();
+
 	float *TypePointer = nullptr; // Only used for determing the type
 
 	std::vector<int> Shape;
@@ -60,11 +64,20 @@ TArray<uint8> SerializationUtils::Array2Npy(const TArray<FFloat16Color>& ImageDa
 	{
 		BinaryData.Add(Element);
 	}
+
+	// Record end time
+	auto finish = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = finish - start;
+	UE_LOG(LogUnrealCV, Error, TEXT("Array2Npy elapsed time: %fs"), elapsed.count());
+
 	return BinaryData;
 }
 
 TArray<uint8> SerializationUtils::Image2Png(const TArray<FColor>& Image, int Width, int Height)
 {
+	// Record start time
+	auto start = std::chrono::high_resolution_clock::now();
+
 	if (Image.Num() == 0 || Image.Num() != Width * Height)
 	{
 		return TArray<uint8>();
@@ -73,6 +86,12 @@ TArray<uint8> SerializationUtils::Image2Png(const TArray<FColor>& Image, int Wid
 	static IImageWrapperPtr ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 	ImageWrapper->SetRaw(Image.GetData(), Image.GetAllocatedSize(), Width, Height, ERGBFormat::BGRA, 8);
 	const TArray<uint8>& ImgData = ImageWrapper->GetCompressed(ImageCompression::Uncompressed);
+
+	// Record end time
+	auto finish = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = finish - start;
+	UE_LOG(LogUnrealCV, Error, TEXT("Image2Png elapsed time: %fs"), elapsed.count());
+
 	return ImgData;
 }
 

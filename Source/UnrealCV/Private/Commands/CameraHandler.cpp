@@ -16,6 +16,7 @@
 FExecStatus GetPngBinary(const TArray<FString>& Args, const FString& Mode);
 FExecStatus GetDepthNpy(const TArray<FString>& Args);
 FExecStatus GetNormalNpy(const TArray<FString>& Args);
+FExecStatus GetImgBinary(const TArray<FString>& Args);
 
 FString GetDiskFilename(FString Filename)
 {
@@ -120,6 +121,10 @@ void FCameraCommandHandler::RegisterCommands()
 	Cmd = FDispatcherDelegate::CreateStatic(GetNormalNpy);
 	CommandDispatcher->BindCommand("vget /camera/[uint]/normal npy", Cmd, Help);
 
+	// for TEST
+	Cmd = FDispatcherDelegate::CreateStatic(GetImgBinary);
+	CommandDispatcher->BindCommand("vget /camera/[uint]/lit bin", Cmd, Help);
+
 	// TODO: object_mask will be handled differently
 }
 
@@ -128,7 +133,53 @@ FExecStatus FCameraCommandHandler::GetCameraProjMatrix(const TArray<FString>& Ar
 	// FMatrix& ProjMatrix = FSceneView::ViewProjectionMatrix;
 	// this->Character->GetWorld()->GetGameViewport()->Viewport->
 	// this->Character
-	return FExecStatus::InvalidArgument;
+	//Cast<UCameraComponent>
+	
+	
+	APlayerController* PlayerController = FUE4CVServer::Get().GetGameWorld()->GetFirstPlayerController();
+	
+	UCameraComponent* camera = Cast<UCameraComponent>(PlayerController->GetViewTarget()->GetComponentByClass(UCameraComponent::StaticClass()));
+	
+	UE_LOG(LogUnrealCV, Error, TEXT("camera->GetName(): %s"), *camera->GetName());
+	UE_LOG(LogUnrealCV, Error, TEXT("camera->FieldOfView: %f"), camera->FieldOfView);
+	UE_LOG(LogUnrealCV, Error, TEXT("camera local location: (%f %f %f)"), camera->RelativeLocation.X, camera->RelativeLocation.Y, camera->RelativeLocation.Z);
+	UE_LOG(LogUnrealCV, Error, TEXT("camera local ratation: (%f %f %f)"), camera->RelativeRotation.Roll, camera->RelativeRotation.Pitch, camera->RelativeRotation.Yaw);
+
+	FVector world_loc = camera->GetComponentLocation();
+	FRotator world_rot = camera->GetComponentRotation();
+	UE_LOG(LogUnrealCV, Error, TEXT("camera local location: (%f %f %f)"), world_loc.X, world_loc.Y, world_loc.Z);
+	UE_LOG(LogUnrealCV, Error, TEXT("camera local ratation: (%f %f %f)"), world_rot.Roll, world_rot.Pitch, world_rot.Yaw);
+
+	/*
+	TArray<UActorComponent*> cameras = (FUE4CVServer::Get().GetPawn()->GetComponentsByClass(UCameraComponent::StaticClass()));
+	for (int32 idx = 0; idx < cameras.Num(); ++idx)
+	{
+		UE_LOG(LogUnrealCV, Error, TEXT("cameras[%d]: %s"), idx, *cameras[idx]->GetFullName());
+		UE_LOG(LogUnrealCV, Error, TEXT("cameras[%d]: %s"), idx, *cameras[idx]->GetName());
+		UE_LOG(LogUnrealCV, Error, TEXT("cameras[%d]: %s"), idx, *cameras[idx]->GetFullGroupName(false));
+	}
+	*/
+	float FOV = 0.0;
+	int32 Width = 0;
+	int32 Height = 0;
+	int32 CameraId = FCString::Atoi(*Args[0]);
+	UGTCaptureComponent* Camera;
+	Camera = FCaptureManager::Get().GetCamera(CameraId);
+	if (Camera == nullptr)
+	{
+		return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
+	}
+	
+	Camera->GetFieldOfView("lit", FOV);
+	Camera->GetSize("lit", Width, Height);
+	if (FOV == 0.0 || Width == 0 || Height == 0)
+	{
+		return FExecStatus::Error("Failed to read the field of view value.");
+	}
+
+	FString Message = FString::Printf(TEXT("%.3f %d %d"), FOV, Width, Height);
+
+	return FExecStatus::OK(Message);
 }
 
 FExecStatus FCameraCommandHandler::MoveTo(const TArray<FString>& Args)
@@ -413,6 +464,28 @@ FExecStatus GetPngBinary(const TArray<FString>& Args, const FString& Mode)
 
 	TArray<uint8> PngBinaryData = SerializationUtils::Image2Png(ImageData, Width, Height);
 	return FExecStatus::Binary(PngBinaryData);
+}
+
+FExecStatus GetImgBinary(const TArray<FString>& Args)
+{
+	UGTCaptureComponent* Camera;
+	FExecStatus Status = ParseCamera(Args, Camera);
+	if (Status != FExecStatusType::OK) return Status;
+
+	TArray<FColor> ImageData;
+	int32 Height = 0, Width = 0;
+	Camera->CaptureImage("lit", ImageData, Width, Height);
+	if (ImageData.Num() == 0)
+	{
+		return FExecStatus::Error(FString::Printf(TEXT("Failed to read lit data.")));
+	}
+
+	TArray<uint8> BinaryData;
+	BinaryData.AddUninitialized(Width*Height*4);
+	FMemory::Memcpy(BinaryData.GetData(), ImageData.GetData(), Width*Height * sizeof(FColor));
+
+	UE_LOG(LogUnrealCV, Error, TEXT("GetImgBinary %dx%ds"), Width, Height);
+	return FExecStatus::Binary(BinaryData);
 }
 
 FExecStatus GetDepthNpy(const TArray<FString>& Args)

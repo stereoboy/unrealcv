@@ -21,7 +21,7 @@ UCLASS()
 class UNREALCV_API UGTCaptureComponent : public USceneComponent // , public FTickableGameObject
 {
 	GENERATED_BODY()
-private:
+protected:
 	UGTCaptureComponent();
 	APawn* Pawn;
 
@@ -44,9 +44,30 @@ public:
 
 	void CaptureImage(const FString& Mode, TArray<FColor>& OutImageData, int32& OutWidth, int32& OutHeight);
 	void CaptureFloat16Image(const FString& Mode, TArray<FFloat16Color>& OutImageData, int32& OutWidth, int32& OutHeight);
-private:
+	void GetFieldOfView(const FString& Mode, float& FOV);
+	void GetSize(const FString& Mode, int32& Width, int32& Height);
+protected:
 	const bool bIsTicking = true;
 
 	TQueue<FGTCaptureTask, EQueueMode::Spsc> PendingTasks;
 	TMap<FString, USceneCaptureComponent2D*> CaptureComponents;
+};
+
+/**
+* Use USceneCaptureComponent2D to export information from the scene.
+* This class needs to be tickable to update the rotation of the USceneCaptureComponent2D
+*/
+UCLASS()
+class UNREALCV_API UGTCameraCaptureComponent : public UGTCaptureComponent // , public FTickableGameObject
+{
+	GENERATED_BODY()
+private:
+	AActor* CameraActor;
+	UCameraComponent* CameraComponent;
+public:
+	static UGTCameraCaptureComponent* Create(APawn* InPawn, AActor* CameraActor, TArray<FString> Modes);
+
+	// virtual void Tick(float DeltaTime) override; // TODO
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override; // TODO
+
 };
