@@ -327,9 +327,24 @@ bool UNetworkManager::SendData(const TArray<uint8>& Payload)
 
 UNetworkManager::~UNetworkManager()
 {
+
+}
+
+void UNetworkManager::BeginDestroy()
+{
+	UE_LOG(LogUnrealCV, Warning, TEXT(">>> UNetworkManager::BeginDestroy()"));
+	Super::BeginDestroy();
+
 	if (ConnectionSocket)
 	{
 		ConnectionSocket->Close();
 	}
-	delete TcpListener;
+
+	if (TcpListener) // Delete previous configuration first
+	{
+		UE_LOG(LogUnrealCV, Warning, TEXT("Stop previous server"));
+		TcpListener->Stop(); // TODO: test the robustness, will this operation successful?
+		delete TcpListener;
+	}
+	UE_LOG(LogUnrealCV, Warning, TEXT("<<< UNetworkManager::BeginDestroy()"));
 }

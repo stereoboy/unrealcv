@@ -75,6 +75,12 @@ FUE4CVServer::FUE4CVServer()
 FUE4CVServer::~FUE4CVServer()
 {
 	// this->NetworkManager->FinishDestroy(); // TODO: Check is this usage correct?
+	// https://wiki.unrealengine.com/Garbage_Collection_%26_Dynamic_Memory_Allocation
+	if (!NetworkManager) return;
+	if (!NetworkManager->IsValidLowLevel()) return;
+
+	NetworkManager->ConditionalBeginDestroy(); //instantly clears UObject out of memory
+	NetworkManager = nullptr;
 }
 
 UWorld* FUE4CVServer::GetGameWorld()
