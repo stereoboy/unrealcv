@@ -438,8 +438,9 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 	const AController* OwningController = OwningCamera ? OwningPawn->GetController() : nullptr;
 	if (OwningController && OwningController->IsLocalPlayerController())
 	{
-		const FRotator CameraViewRotation = CameraComponent->GetComponentRotation();
-		const FVector CameraViewLocation = CameraComponent->GetComponentLocation();
+		const FRotator CameraViewRotation = this->CameraComponent->GetComponentRotation();
+		const FVector CameraViewLocation = this->CameraComponent->GetComponentLocation();
+		const float CameraFieldOfView = this->CameraComponent->FieldOfView;
 		for (auto Elem : CaptureComponents)
 		{
 			USceneCaptureComponent2D* CaptureComponent = Elem.Value;
@@ -450,6 +451,10 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 			if (!CameraViewLocation.Equals(CaptureComponent->GetComponentLocation()))
 			{
 				CaptureComponent->SetWorldLocation(CameraViewLocation);
+			}
+			if (CameraFieldOfView != CaptureComponent->FOVAngle)
+			{
+				CaptureComponent->FOVAngle = CameraFieldOfView;
 			}
 
 		}
