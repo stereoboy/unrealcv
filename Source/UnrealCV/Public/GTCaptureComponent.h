@@ -65,7 +65,7 @@ private:
 	AActor* CameraActor;
 	UCameraComponent* CameraComponent;
 public:
-	static UGTCameraCaptureComponent* Create(APawn* InPawn, AActor* CameraActor, TArray<FString> Modes);
+	static UGTCameraCaptureComponent* Create(APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes);
 
 	// virtual void Tick(float DeltaTime) override; // TODO
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override; // TODO

@@ -353,7 +353,7 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 
 
 
-UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AActor* InCameraActor, TArray<FString> Modes)
+UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes)
 {
 	UWorld* World = FUE4CVServer::Get().GetGameWorld();
 	UGTCameraCaptureComponent* GTCapturer = NewObject<UGTCameraCaptureComponent>();
@@ -362,7 +362,7 @@ UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AAct
 	// check(GTCapturer->IsComponentTickEnabled() == true);
 	GTCapturer->Pawn = InPawn;
 	GTCapturer->CameraActor = InCameraActor; // This GTCapturer should depend on the Pawn and be released together with the Pawn.
-	GTCapturer->CameraComponent = Cast<UCameraComponent>(GTCapturer->CameraActor->GetComponentByClass(UCameraComponent::StaticClass()));
+	GTCapturer->CameraComponent = InCameraComp;
 
 							   // This snippet is from Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp, AttachTo
 	FAttachmentTransformRules AttachmentRules(EAttachmentRule::KeepRelative, false);

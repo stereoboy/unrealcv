@@ -30,11 +30,21 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 	// RightEye->AddLocalOffset(FVector(0, 40, 0)); // TODO: make this configurable
 	CaptureComponentList.Add(RightEye);
 
-	
-	UGTCaptureComponent* MainMonitor = UGTCameraCaptureComponent::Create(Pawn, Pawn->GetController()->GetViewTarget(), SupportedModes);
-	// RightEye->AddLocalOffset(FVector(0, 40, 0)); // TODO: make this configurable
-	CaptureComponentList.Add(MainMonitor);
-	
+	UE_LOG(LogUnrealCV, Log, TEXT("Camera Component List"));
+	TArray<UActorComponent*> cameras = (Pawn->GetComponentsByClass(UCameraComponent::StaticClass()));
+	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
+	for (int32 idx = 0; idx < cameras.Num(); ++idx)
+	{
+		UCameraComponent* camera = Cast<UCameraComponent>(cameras[idx]);
+		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetFullName());
+		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetName());
+		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetFullGroupName(false));
+
+		UGTCaptureComponent* camCom = UGTCameraCaptureComponent::Create(Pawn, camera->GetOwner(), camera, SupportedModes);
+		// RightEye->AddLocalOffset(FVector(0, 40, 0)); // TODO: make this configurable
+		CaptureComponentList.Add(camCom);
+	}
+	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 }
 
 UGTCaptureComponent* FCaptureManager::GetCamera(int32 CameraId)
