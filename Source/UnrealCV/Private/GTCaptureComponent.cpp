@@ -234,7 +234,12 @@ void UGTCaptureComponent::CaptureImage(const FString& Mode, TArray<FColor>& OutI
 	FReadSurfaceDataFlags ReadSurfaceDataFlags;
 	ReadSurfaceDataFlags.SetLinearToGamma(false); // This is super important to disable this!
 	// Instead of using this flag, we will set the gamma to the correct value directly
-	RenderTargetResource->ReadPixels(OutImageData, ReadSurfaceDataFlags);
+	if (!RenderTargetResource->ReadPixels(OutImageData, ReadSurfaceDataFlags))
+	{
+		UE_LOG(LogUnrealCV, Warning, TEXT("ReadPixels() failed: %s"), *Mode);
+		OutWidth = 0; OutHeight = 0;
+		return;
+	}
 	OutWidth = RenderTarget->SizeX;
 	OutHeight = RenderTarget->SizeY;
 }
@@ -364,7 +369,7 @@ UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AAct
 	GTCapturer->CameraActor = InCameraActor; // This GTCapturer should depend on the Pawn and be released together with the Pawn.
 	GTCapturer->CameraComponent = InCameraComp;
 
-							   // This snippet is from Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp, AttachTo
+	// This snippet is from Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp, AttachTo
 	FAttachmentTransformRules AttachmentRules(EAttachmentRule::KeepRelative, false);
 	ConvertAttachLocation(EAttachLocation::KeepRelativeOffset, AttachmentRules.LocationRule, AttachmentRules.RotationRule, AttachmentRules.ScaleRule);
 	GTCapturer->AttachToComponent(InCameraActor->GetRootComponent(), AttachmentRules);
@@ -420,6 +425,29 @@ UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AAct
 			}
 		}
 	}
+
+	// Initialize Rotation, Location, FOV
+	const FRotator CameraViewRotation = GTCapturer->CameraComponent->GetComponentRotation();
+	const FVector CameraViewLocation = GTCapturer->CameraComponent->GetComponentLocation();
+	const float CameraFieldOfView = GTCapturer->CameraComponent->FieldOfView;
+	for (auto Elem : GTCapturer->CaptureComponents)
+	{
+		USceneCaptureComponent2D* CaptureComponent = Elem.Value;
+		if (!CameraViewRotation.Equals(CaptureComponent->GetComponentRotation()))
+		{
+			CaptureComponent->SetWorldRotation(CameraViewRotation);
+		}
+		if (!CameraViewLocation.Equals(CaptureComponent->GetComponentLocation()))
+		{
+			CaptureComponent->SetWorldLocation(CameraViewLocation);
+		}
+		if (CameraFieldOfView != CaptureComponent->FOVAngle)
+		{
+			CaptureComponent->FOVAngle = CameraFieldOfView;
+		}
+
+	}
+	UE_LOG(LogUnrealCV, Log, TEXT("%s initialized!"), *GTCapturer->CameraComponent->GetName());
 	return GTCapturer;
 }
 
@@ -441,6 +469,7 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 		const FRotator CameraViewRotation = this->CameraComponent->GetComponentRotation();
 		const FVector CameraViewLocation = this->CameraComponent->GetComponentLocation();
 		const float CameraFieldOfView = this->CameraComponent->FieldOfView;
+		//UE_LOG(LogUnrealCV, Log, TEXT("%s update!"), *this->CameraComponent->GetName());
 		for (auto Elem : CaptureComponents)
 		{
 			USceneCaptureComponent2D* CaptureComponent = Elem.Value;

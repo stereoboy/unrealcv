@@ -141,7 +141,7 @@ FExecStatus FCameraCommandHandler::GetCameraProjMatrix(const TArray<FString>& Ar
 	// this->Character
 	//Cast<UCameraComponent>
 	
-	
+	/*
 	APlayerController* PlayerController = FUE4CVServer::Get().GetGameWorld()->GetFirstPlayerController();
 	
 	UCameraComponent* camera = Cast<UCameraComponent>(PlayerController->GetViewTarget()->GetComponentByClass(UCameraComponent::StaticClass()));
@@ -155,7 +155,7 @@ FExecStatus FCameraCommandHandler::GetCameraProjMatrix(const TArray<FString>& Ar
 	FRotator world_rot = camera->GetComponentRotation();
 	UE_LOG(LogUnrealCV, Error, TEXT("camera local location: (%f %f %f)"), world_loc.X, world_loc.Y, world_loc.Z);
 	UE_LOG(LogUnrealCV, Error, TEXT("camera local ratation: (%f %f %f)"), world_rot.Roll, world_rot.Pitch, world_rot.Yaw);
-
+	*/
 	/*
 	TArray<UActorComponent*> cameras = (FUE4CVServer::Get().GetPawn()->GetComponentsByClass(UCameraComponent::StaticClass()));
 	for (int32 idx = 0; idx < cameras.Num(); ++idx)
@@ -486,11 +486,12 @@ FExecStatus GetImgBinary(const TArray<FString>& Args)
 		return FExecStatus::Error(FString::Printf(TEXT("Failed to read lit data.")));
 	}
 
+	// https://docs.unrealengine.com/latest/INT/Programming/UnrealArchitecture/TArrays/
 	TArray<uint8> BinaryData;
-	BinaryData.AddUninitialized(Width*Height*4);
+	BinaryData.AddUninitialized(Width*Height*sizeof(FColor));
 	FMemory::Memcpy(BinaryData.GetData(), ImageData.GetData(), Width*Height * sizeof(FColor));
 
-	UE_LOG(LogUnrealCV, Error, TEXT("GetImgBinary %dx%ds"), Width, Height);
+	UE_LOG(LogUnrealCV, Log, TEXT("GetImgBinary %dx%d"), Width, Height);
 	return FExecStatus::Binary(BinaryData);
 }
 
