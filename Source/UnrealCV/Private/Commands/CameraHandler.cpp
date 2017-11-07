@@ -12,6 +12,7 @@
 #include "ObjectPainter.h"
 #include "ScreenCapture.h"
 #include "Serialization.h"
+#include "Kismet/KismetMathLibrary.h"
 
 FExecStatus GetPngBinary(const TArray<FString>& Args, const FString& Mode);
 FExecStatus GetDepthNpy(const TArray<FString>& Args);
@@ -124,6 +125,11 @@ void FCameraCommandHandler::RegisterCommands()
 	// for TEST
 	Cmd = FDispatcherDelegate::CreateStatic(GetImgBinary);
 	CommandDispatcher->BindCommand("vget /camera/[uint]/lit bin", Cmd, Help);
+
+	/** This is different from SetLocation (which is teleport) */
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::PawnMove);
+	Help = "Move pawn with delta [x, y, z, pitch, yaw, roll], will be blocked by objects";
+	CommandDispatcher->BindCommand("vset /pawn/move [float] [float] [float] [float] [float] [float]", Cmd, Help);
 
 	// TODO: object_mask will be handled differently
 }
@@ -525,4 +531,43 @@ FExecStatus GetNormalNpy(const TArray<FString>& Args)
 
 	return FExecStatus::Binary(NpyBinaryData);
 
+}
+
+FExecStatus FCameraCommandHandler::PawnMove(const TArray<FString>& Args)
+{
+	if (Args.Num() == 6) // X, Y, Z, Pitch, Yaw, Roll
+	{
+		float X = FCString::Atof(*Args[0]), Y = FCString::Atof(*Args[1]), Z = FCString::Atof(*Args[2]);
+		float Pitch = FCString::Atof(*Args[3]), Yaw = FCString::Atof(*Args[4]), Roll = FCString::Atof(*Args[5]);
+		FVector Offset = FVector(X, Y, Z);
+		FRotator Rot = FRotator(Pitch, Yaw, Roll);
+
+		bool Sweep = true;
+		// if sweep is true, the object can not move through another object
+		// Check invalid location and move back a bit.
+
+		APawn* me = FUE4CVServer::Get().GetPawn();
+		me->AddControllerPitchInput(Pitch);
+		me->AddControllerYawInput(Yaw);
+		me->AddControllerRollInput(Roll);
+
+		FRotator CtrlRot = me->GetControlRotation();
+		FVector foward = UKismetMathLibrary::GetForwardVector(CtrlRot);
+		FVector right = UKismetMathLibrary::GetRightVector(CtrlRot);
+		FVector up = UKismetMathLibrary::GetUpVector(CtrlRot);
+
+		FVector offset = foward*X + right*Y + up*Z;
+		FVector direction;
+		float norm;
+		offset.ToDirectionAndLength(direction, norm);
+
+		//me->AddMovementInput(offset);
+
+		FVector NewLocation = me->GetActorLocation() + offset;
+		me->SetActorLocation(NewLocation);
+
+		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f %.3f"), direction.X, direction.Y, direction.Z, norm);
+		return FExecStatus::OK(Message);
+	}
+	return FExecStatus::InvalidArgument;
 }
