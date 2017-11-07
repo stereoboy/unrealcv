@@ -48,6 +48,6 @@ public:
 	/** Get ViewMode data by switching to this viewmode then switch back, can not support multi-camera */
 	FExecStatus GetObjectInstanceMask(const TArray<FString>& Args);
 
-	/** vset /pawn/move x y z pitch yaw roll */
-	FExecStatus	PawnMove(const TArray<FString>& Args);
+	/** vset /actor/move x y z pitch yaw roll */
+	FExecStatus	ActorMove(const TArray<FString>& Args);
 };

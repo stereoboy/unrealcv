@@ -127,9 +127,9 @@ void FCameraCommandHandler::RegisterCommands()
 	CommandDispatcher->BindCommand("vget /camera/[uint]/lit bin", Cmd, Help);
 
 	/** This is different from SetLocation (which is teleport) */
-	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::PawnMove);
-	Help = "Move pawn with delta [x, y, z, pitch, yaw, roll], will be blocked by objects";
-	CommandDispatcher->BindCommand("vset /pawn/move [float] [float] [float] [float] [float] [float]", Cmd, Help);
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::ActorMove);
+	Help = "Move player actor with delta [x, y, z, pitch, yaw, roll], will be blocked by objects";
+	CommandDispatcher->BindCommand("vset /actor/move [float] [float] [float] [float] [float] [float]", Cmd, Help);
 
 	// TODO: object_mask will be handled differently
 }
@@ -533,7 +533,7 @@ FExecStatus GetNormalNpy(const TArray<FString>& Args)
 
 }
 
-FExecStatus FCameraCommandHandler::PawnMove(const TArray<FString>& Args)
+FExecStatus FCameraCommandHandler::ActorMove(const TArray<FString>& Args)
 {
 	if (Args.Num() == 6) // X, Y, Z, Pitch, Yaw, Roll
 	{
@@ -546,12 +546,12 @@ FExecStatus FCameraCommandHandler::PawnMove(const TArray<FString>& Args)
 		// if sweep is true, the object can not move through another object
 		// Check invalid location and move back a bit.
 
-		APawn* me = FUE4CVServer::Get().GetPawn();
-		me->AddControllerPitchInput(Pitch);
-		me->AddControllerYawInput(Yaw);
-		me->AddControllerRollInput(Roll);
+		APawn* Pawn = FUE4CVServer::Get().GetPawn();
+		Pawn->AddControllerPitchInput(Pitch);
+		Pawn->AddControllerYawInput(Yaw);
+		Pawn->AddControllerRollInput(Roll);
 
-		FRotator CtrlRot = me->GetControlRotation();
+		FRotator CtrlRot = Pawn->GetControlRotation();
 		FVector foward = UKismetMathLibrary::GetForwardVector(CtrlRot);
 		FVector right = UKismetMathLibrary::GetRightVector(CtrlRot);
 		FVector up = UKismetMathLibrary::GetUpVector(CtrlRot);
@@ -561,10 +561,13 @@ FExecStatus FCameraCommandHandler::PawnMove(const TArray<FString>& Args)
 		float norm;
 		offset.ToDirectionAndLength(direction, norm);
 
-		//me->AddMovementInput(offset);
+		//Pawn->AddMovementInput(offset);
 
-		FVector NewLocation = me->GetActorLocation() + offset;
-		me->SetActorLocation(NewLocation);
+		//float modified_norm = FMath::Min<float>(norm, 5.0);
+
+		FVector NewLocation = Pawn->GetActorLocation() + direction*norm;
+
+		Pawn->SetActorLocation(NewLocation);
 
 		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f %.3f"), direction.X, direction.Y, direction.Z, norm);
 		return FExecStatus::OK(Message);
