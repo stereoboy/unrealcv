@@ -126,8 +126,11 @@ void FCameraCommandHandler::RegisterCommands()
 	Cmd = FDispatcherDelegate::CreateStatic(GetImgBinary);
 	CommandDispatcher->BindCommand("vget /camera/[uint]/lit bin", Cmd, Help);
 
-	/** This is different from SetLocation (which is teleport) */
-	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::ActorMove);
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::SetCameraTransform);
+	Help = "Move camera to [x, y, z, pitch, yaw, roll] of camera [id]";
+	CommandDispatcher->BindCommand("vset /camera/[uint]/transform [float] [float] [float] [float] [float] [float]", Cmd, Help);
+
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::MoveActor);
 	Help = "Move player actor with delta [x, y, z, pitch, yaw, roll], will be blocked by objects";
 	CommandDispatcher->BindCommand("vset /actor/move [float] [float] [float] [float] [float] [float]", Cmd, Help);
 
@@ -212,17 +215,22 @@ FExecStatus FCameraCommandHandler::SetCameraLocation(const TArray<FString>& Args
 	/** The API for Character, Pawn and Actor are different */
 	if (Args.Num() == 4) // ID, X, Y, Z
 	{
-		int32 CameraId = FCString::Atoi(*Args[0]); // TODO: Add support for multiple cameras
+		int32 CameraId = FCString::Atoi(*Args[0]);
 		float X = FCString::Atof(*Args[1]), Y = FCString::Atof(*Args[2]), Z = FCString::Atof(*Args[3]);
 		FVector Location = FVector(X, Y, Z);
 
-		bool Sweep = false;
-		// if sweep is true, the object can not move through another object
-		// Check invalid location and move back a bit.
-
-		bool Success = FUE4CVServer::Get().GetPawn()->SetActorLocation(Location, Sweep, NULL, ETeleportType::TeleportPhysics);
-
-		return FExecStatus::OK();
+		APawn* Pawn = FUE4CVServer::Get().GetPawn();
+		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
+		if (CameraId < cameras.Num())
+		{
+			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
+			camera->SetRelativeLocation(Location);
+			return FExecStatus::OK();
+		}
+		else
+		{
+			return FExecStatus::Error("Camera %d can not be found.");
+		}
 	}
 	return FExecStatus::InvalidArgument;
 }
@@ -231,50 +239,72 @@ FExecStatus FCameraCommandHandler::SetCameraRotation(const TArray<FString>& Args
 {
 	if (Args.Num() == 4) // ID, Pitch, Roll, Yaw
 	{
-		int32 CameraId = FCString::Atoi(*Args[0]); // TODO: Add support for multiple cameras
+		int32 CameraId = FCString::Atoi(*Args[0]);
 		float Pitch = FCString::Atof(*Args[1]), Yaw = FCString::Atof(*Args[2]), Roll = FCString::Atof(*Args[3]);
 		FRotator Rotator = FRotator(Pitch, Yaw, Roll);
-		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		AController* Controller = Pawn->GetController();
-		Controller->ClientSetRotation(Rotator); // Teleport action
-		// SetActorRotation(Rotator);  // This is not working
 
-		return FExecStatus::OK();
+		APawn* Pawn = FUE4CVServer::Get().GetPawn();
+		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
+		if (CameraId < cameras.Num())
+		{
+			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
+			camera->SetRelativeRotation(Rotator);
+			return FExecStatus::OK();
+		}
+		else
+		{
+			return FExecStatus::Error("Camera %d can not be found.");
+		}
 	}
 	return FExecStatus::InvalidArgument;
 }
 
+FExecStatus FCameraCommandHandler::SetCameraTransform(const TArray<FString>& Args)
+{
+	if (Args.Num() == 7) // ID, Pitch, Roll, Yaw
+	{
+		int32 CameraId = FCString::Atoi(*Args[0]);
+		float X = FCString::Atof(*Args[1]), Y = FCString::Atof(*Args[2]), Z = FCString::Atof(*Args[3]);
+		FVector Location = FVector(X, Y, Z);
+		float Pitch = FCString::Atof(*Args[4]), Yaw = FCString::Atof(*Args[5]), Roll = FCString::Atof(*Args[6]);
+		FRotator Rotator = FRotator(Pitch, Yaw, Roll);
 
+		APawn* Pawn = FUE4CVServer::Get().GetPawn();
+		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
+		if (CameraId < cameras.Num())
+		{
+			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
+			camera->SetRelativeLocation(Location);
+			camera->SetRelativeRotation(Rotator);
+			return FExecStatus::OK();
+		}
+		else
+		{
+			return FExecStatus::Error("Camera %d can not be found.");
+		}
+	}
+	return FExecStatus::InvalidArgument;
+}
 
 FExecStatus FCameraCommandHandler::GetCameraRotation(const TArray<FString>& Args)
 {
 	if (Args.Num() == 1)
 	{
-		bool bIsMatinee = false;
-
+		int32 CameraId = FCString::Atoi(*Args[0]);
+		APawn* Pawn = FUE4CVServer::Get().GetPawn();
 		FRotator CameraRotation;
-		ACineCameraActor* CineCameraActor = nullptr;
-		for (AActor* Actor : this->GetWorld()->GetCurrentLevel()->Actors)
+		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
+		if (CameraId < cameras.Num())
 		{
-			// if (Actor && Actor->IsA(AMatineeActor::StaticClass())) // AMatineeActor is deprecated
-			if (Actor && Actor->IsA(ACineCameraActor::StaticClass()))
-			{
-				bIsMatinee = true;
-				CameraRotation = Actor->GetActorRotation();
-				break;
-			}
+			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
+			CameraRotation = camera->GetRelativeTransform().GetRotation().Rotator();
+			FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraRotation.Pitch, CameraRotation.Yaw, CameraRotation.Roll);
+			return FExecStatus::OK(Message);
 		}
-
-		if (!bIsMatinee)
+		else
 		{
-			int32 CameraId = FCString::Atoi(*Args[0]); // TODO: Add support for multiple cameras
-			APawn* Pawn = FUE4CVServer::Get().GetPawn();
-			CameraRotation = Pawn->GetControlRotation();
+			return FExecStatus::Error("Camera %d can not be found.");
 		}
-
-		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraRotation.Pitch, CameraRotation.Yaw, CameraRotation.Roll);
-
-		return FExecStatus::OK(Message);
 	}
 	return FExecStatus::Error("Number of arguments incorrect");
 }
@@ -283,40 +313,25 @@ FExecStatus FCameraCommandHandler::GetCameraLocation(const TArray<FString>& Args
 {
 	if (Args.Num() == 1)
 	{
-		bool bIsMatinee = false;
-
-		FVector CameraLocation;
-		ACineCameraActor* CineCameraActor = nullptr;
-		for (AActor* Actor : this->GetWorld()->GetCurrentLevel()->Actors)
+		int32 CameraId = FCString::Atoi(*Args[0]);
+		APawn* Pawn = FUE4CVServer::Get().GetPawn();
+		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
+		if (CameraId < cameras.Num())
 		{
-			// if (Actor && Actor->IsA(AMatineeActor::StaticClass())) // AMatineeActor is deprecated
-			if (Actor && Actor->IsA(ACineCameraActor::StaticClass()))
-			{
-				bIsMatinee = true;
-				CameraLocation = Actor->GetActorLocation();
-				break;
-			}
+			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
+			FVector CameraLocation = camera->GetRelativeTransform().GetLocation();
+			FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraLocation.X, CameraLocation.Y, CameraLocation.Z);
+			return FExecStatus::OK(Message);
 		}
-
-		if (!bIsMatinee)
+		else
 		{
-			int32 CameraId = FCString::Atoi(*Args[0]); // TODO: Add support for multiple cameras
-			// APawn* Pawn = FUE4CVServer::Get().GetPawn();
-			// CameraLocation = Pawn->GetActorLocation();
-			UGTCaptureComponent* CaptureComponent = FCaptureManager::Get().GetCamera(CameraId);
-			if (CaptureComponent == nullptr)
-			{
-				return FExecStatus::Error(FString::Printf(TEXT("Camera %d can not be found."), CameraId));
-			}
-			CameraLocation = CaptureComponent->GetComponentLocation();
+			return FExecStatus::Error("Camera %d can not be found.");
 		}
-
-		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraLocation.X, CameraLocation.Y, CameraLocation.Z);
-
-		return FExecStatus::OK(Message);
 	}
 	return FExecStatus::Error("Number of arguments incorrect");
 }
+
+
 
 FExecStatus FCameraCommandHandler::GetObjectInstanceMask(const TArray<FString>& Args)
 {
@@ -534,7 +549,7 @@ FExecStatus GetNormalNpy(const TArray<FString>& Args)
 
 }
 
-FExecStatus FCameraCommandHandler::ActorMove(const TArray<FString>& Args)
+FExecStatus FCameraCommandHandler::MoveActor(const TArray<FString>& Args)
 {
 	if (Args.Num() == 6) // X, Y, Z, Pitch, Yaw, Roll
 	{

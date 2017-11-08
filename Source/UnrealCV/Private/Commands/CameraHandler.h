@@ -20,6 +20,9 @@ public:
 	/** vset /camera/[id]/rotation */
 	FExecStatus	SetCameraRotation(const TArray<FString>& Args);
 
+	/** vset /camera/[id]/transform */
+	FExecStatus	SetCameraTransform(const TArray<FString>& Args);
+
 	/** vget /actor/rotation, follow the concept of actor in RL */
 	FExecStatus GetActorRotation(const TArray<FString>& Args);
 	/** vget /actor/location */
@@ -49,5 +52,5 @@ public:
 	FExecStatus GetObjectInstanceMask(const TArray<FString>& Args);
 
 	/** vset /actor/move x y z pitch yaw roll */
-	FExecStatus	ActorMove(const TArray<FString>& Args);
+	FExecStatus	MoveActor(const TArray<FString>& Args);
 };
