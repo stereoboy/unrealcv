@@ -17,6 +17,10 @@ struct FGTCaptureTask
  * Use USceneCaptureComponent2D to export information from the scene.
  * This class needs to be tickable to update the rotation of the USceneCaptureComponent2D
  */
+
+//FIXME
+#define PARAM_MOVE_ANIM_COUNT 50 // tuning parameter considering unrealcv, robot, ROS
+
 UCLASS()
 class UNREALCV_API UGTCaptureComponent : public USceneComponent // , public FTickableGameObject
 {
@@ -24,6 +28,11 @@ class UNREALCV_API UGTCaptureComponent : public USceneComponent // , public FTic
 protected:
 	UGTCaptureComponent();
 	APawn* Pawn;
+	FTransform Velocity;
+	int32 MoveAnimCountFromRemote = 0;
+
+	FTransform TargetPose;
+	bool IsMoveToTarget = false;
 
 public:
 	static UGTCaptureComponent* Create(APawn* Pawn, TArray<FString> Modes);
@@ -46,6 +55,8 @@ public:
 	void CaptureFloat16Image(const FString& Mode, TArray<FFloat16Color>& OutImageData, int32& OutWidth, int32& OutHeight);
 	void GetFieldOfView(const FString& Mode, float& FOV);
 	void GetSize(const FString& Mode, int32& Width, int32& Height);
+	void SetVelocity(const FTransform& Velocity);
+	void SetTargetPose(const FTransform& TargetPose);
 protected:
 	const bool bIsTicking = true;
 

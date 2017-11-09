@@ -294,6 +294,18 @@ void UGTCaptureComponent::GetSize(const FString& Mode, int32& Width, int32& Heig
 	return;
 }
 
+void UGTCaptureComponent::SetVelocity(const FTransform& InVelocity)
+{
+	this->Velocity = InVelocity;
+	this->MoveAnimCountFromRemote = PARAM_MOVE_ANIM_COUNT;
+}
+
+void UGTCaptureComponent::SetTargetPose(const FTransform& InTargetPose)
+{
+	this->TargetPose = InTargetPose;
+	this->IsMoveToTarget = true;
+}
+
 void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 // void UGTCaptureComponent::Tick(float DeltaTime) // This tick function should be called by the scene instead of been
 {
@@ -306,6 +318,17 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 	const AController* OwningController = OwningPawn ? OwningPawn->GetController() : nullptr;
 	if (OwningController && OwningController->IsLocalPlayerController())
 	{
+		if (this->MoveAnimCountFromRemote > 0)
+		{
+			FVector DeltaXYZ = this->Velocity.GetLocation()*DeltaTime;
+			this->Pawn->AddMovementInput(DeltaXYZ);
+			FRotator Rot = this->Velocity.GetRotation().Rotator();
+			this->Pawn->AddControllerPitchInput(Rot.Pitch*DeltaTime);
+			this->Pawn->AddControllerYawInput(Rot.Yaw*DeltaTime);
+			this->Pawn->AddControllerRollInput(Rot.Roll*DeltaTime);
+			this->MoveAnimCountFromRemote--;
+		}
+
 		const FRotator PawnViewRotation = OwningPawn->GetViewRotation();
 		for (auto Elem : CaptureComponents)
 		{
@@ -354,9 +377,6 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 		Task.AsyncRecord->bIsCompleted = true;
 	}
 }
-
-
-
 
 UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes)
 {

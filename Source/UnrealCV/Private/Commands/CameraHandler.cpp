@@ -563,9 +563,9 @@ FExecStatus FCameraCommandHandler::MoveActor(const TArray<FString>& Args)
 		// Check invalid location and move back a bit.
 
 		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		Pawn->AddControllerPitchInput(Pitch);
-		Pawn->AddControllerYawInput(Yaw);
-		Pawn->AddControllerRollInput(Roll);
+		//Pawn->AddControllerPitchInput(Pitch);
+		//Pawn->AddControllerYawInput(Yaw);
+		//Pawn->AddControllerRollInput(Roll);
 
 		FRotator CtrlRot = Pawn->GetControlRotation();
 		FVector foward = UKismetMathLibrary::GetForwardVector(CtrlRot);
@@ -578,12 +578,54 @@ FExecStatus FCameraCommandHandler::MoveActor(const TArray<FString>& Args)
 		offset.ToDirectionAndLength(direction, norm);
 
 		//Pawn->AddMovementInput(offset);
-
 		//float modified_norm = FMath::Min<float>(norm, 5.0);
 
-		FVector NewLocation = Pawn->GetActorLocation() + direction*norm;
+		//FVector NewLocation = Pawn->GetActorLocation() + direction*norm;
+		//Pawn->SetActorLocation(NewLocation);
 
-		Pawn->SetActorLocation(NewLocation);
+		UGTCaptureComponent* GTCapturer = FCaptureManager::Get().GetCamera(0);
+		FTransform Velocity;
+		Velocity.SetLocation(direction*norm);
+		Velocity.SetRotation(Rot.Quaternion());
+		GTCapturer->SetVelocity(Velocity);
+
+#if 0
+		static const FName MoveAnimCountFromRemote(TEXT("MoveAnimCountFromRemote"));
+		static const FName XVelocity(TEXT("XVelocity"));
+		static const FName YawVelocity(TEXT("YawVelocity"));
+
+		UClass* MyClass = Pawn->GetClass();
+
+		for (UProperty* Property = MyClass->PropertyLink; Property; Property = Property->PropertyLinkNext)
+		{
+			UIntProperty* IntProperty = Cast<UIntProperty>(Property);
+			UFloatProperty* FloatProperty = Cast<UFloatProperty>(Property);
+			UE_LOG(LogUnrealCV, Log, TEXT("Property: %s"), *Property->GetName())
+			if (IntProperty && Property->GetFName() == MoveAnimCountFromRemote)
+			{
+				// Need more work for arrays
+				int32 MyIntValue = IntProperty->GetPropertyValue(Property->ContainerPtrToValuePtr<int32>(Pawn));
+				UE_LOG(LogUnrealCV, Log, TEXT("Before-Value is = %i"), MyIntValue);
+				IntProperty->SetPropertyValue(Property->ContainerPtrToValuePtr<int32>(Pawn), PARAM_MOVE_ANIM_COUNT);
+				//MyIntValue = IntProperty->GetPropertyValue(Property->ContainerPtrToValuePtr<int32>(Pawn));
+				//UE_LOG(LogUnrealCV, Log, TEXT("After-Value is = %i"), MyIntValue);
+			}
+			else if (FloatProperty && Property->GetFName() == XVelocity)
+			{
+				// Need more work for arrays
+				FloatProperty->SetPropertyValue(Property->ContainerPtrToValuePtr<float>(Pawn), X);
+				float value = FloatProperty->GetPropertyValue(Property->ContainerPtrToValuePtr<float>(Pawn));
+				UE_LOG(LogUnrealCV, Log, TEXT("XVelocity = %f"), value);
+			}
+			else if (FloatProperty && Property->GetFName() == YawVelocity)
+			{
+				// Need more work for arrays
+				FloatProperty->SetPropertyValue(Property->ContainerPtrToValuePtr<float>(Pawn), Yaw);
+				float value = FloatProperty->GetPropertyValue(Property->ContainerPtrToValuePtr<float>(Pawn));
+				UE_LOG(LogUnrealCV, Log, TEXT("YawVelocity = %f"), value);
+			}
+		}
+#endif
 
 		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f %.3f"), direction.X, direction.Y, direction.Z, norm);
 		return FExecStatus::OK(Message);
