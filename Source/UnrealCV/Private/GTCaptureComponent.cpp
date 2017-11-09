@@ -321,11 +321,13 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 		if (this->MoveAnimCountFromRemote > 0)
 		{
 			FVector DeltaXYZ = this->Velocity.GetLocation()*DeltaTime;
+			FRotator Rot = this->Velocity.Rotator();
+
 			this->Pawn->AddMovementInput(DeltaXYZ);
-			FRotator Rot = this->Velocity.GetRotation().Rotator();
 			this->Pawn->AddControllerPitchInput(Rot.Pitch*DeltaTime);
 			this->Pawn->AddControllerYawInput(Rot.Yaw*DeltaTime);
 			this->Pawn->AddControllerRollInput(Rot.Roll*DeltaTime);
+
 			this->MoveAnimCountFromRemote--;
 		}
 
@@ -486,6 +488,17 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 	const AController* OwningController = OwningCamera ? OwningPawn->GetController() : nullptr;
 	if (OwningController && OwningController->IsLocalPlayerController())
 	{
+		if (this->MoveAnimCountFromRemote > 0)
+		{
+			FVector DeltaXYZ = this->Velocity.GetLocation()*DeltaTime;
+			FRotator DeltaRot = this->Velocity.Rotator()*DeltaTime;
+
+			this->CameraComponent->AddRelativeLocation(DeltaXYZ);
+			this->CameraComponent->AddRelativeRotation(DeltaRot);
+
+			this->MoveAnimCountFromRemote--;
+		}
+
 		const FRotator CameraViewRotation = this->CameraComponent->GetComponentRotation();
 		const FVector CameraViewLocation = this->CameraComponent->GetComponentLocation();
 		const float CameraFieldOfView = this->CameraComponent->FieldOfView;

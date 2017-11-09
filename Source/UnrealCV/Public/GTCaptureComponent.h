@@ -1,4 +1,5 @@
 #pragma once
+#include "Object.h"
 #include "UE4CVServer.h"
 #include "GTCaptureComponent.generated.h"
 
@@ -20,7 +21,8 @@ struct FGTCaptureTask
 
 //FIXME
 #define PARAM_MOVE_ANIM_COUNT 50 // tuning parameter considering unrealcv, robot, ROS
-
+#define PARAM_MAX_CAM_LINEAR_SPEED 10    // tuning parameter considering unrealcv, robot, ROS
+#define PARAM_MAX_CAM_ANGULAR_SPEED 10   // tuning parameter considering unrealcv, robot, ROS
 UCLASS()
 class UNREALCV_API UGTCaptureComponent : public USceneComponent // , public FTickableGameObject
 {
@@ -78,6 +80,7 @@ private:
 public:
 	static UGTCameraCaptureComponent* Create(APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes);
 
+	UCameraComponent* GetCameraComponent() { return CameraComponent; }
 	// virtual void Tick(float DeltaTime) override; // TODO
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override; // TODO
 

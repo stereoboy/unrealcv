@@ -130,6 +130,10 @@ void FCameraCommandHandler::RegisterCommands()
 	Help = "Move camera to [x, y, z, pitch, yaw, roll] of camera [id]";
 	CommandDispatcher->BindCommand("vset /camera/[uint]/transform [float] [float] [float] [float] [float] [float]", Cmd, Help);
 
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::MoveCamera);
+	Help = "Move camera with delta [x, y, z, pitch, yaw, roll] of camera [id]";
+	CommandDispatcher->BindCommand("vset /camera/[uint]/move [float] [float] [float] [float] [float] [float]", Cmd, Help);
+
 	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::MoveActor);
 	Help = "Move player actor with delta [x, y, z, pitch, yaw, roll], will be blocked by objects";
 	CommandDispatcher->BindCommand("vset /actor/move [float] [float] [float] [float] [float] [float]", Cmd, Help);
@@ -282,6 +286,29 @@ FExecStatus FCameraCommandHandler::SetCameraTransform(const TArray<FString>& Arg
 		{
 			return FExecStatus::Error("Camera %d can not be found.");
 		}
+	}
+	return FExecStatus::InvalidArgument;
+}
+
+FExecStatus FCameraCommandHandler::MoveCamera(const TArray<FString>& Args)
+{
+	if (Args.Num() == 7) // ID, Pitch, Roll, Yaw
+	{
+		int32 CameraId = FCString::Atoi(*Args[0]);
+		float X = FCString::Atof(*Args[1]), Y = FCString::Atof(*Args[2]), Z = FCString::Atof(*Args[3]);
+		FVector Loc = FVector(X, Y, Z);
+		float Pitch = FCString::Atof(*Args[4]), Yaw = FCString::Atof(*Args[5]), Roll = FCString::Atof(*Args[6]);
+		FRotator Rot = FRotator(Pitch, Yaw, Roll);
+
+		UGTCameraCaptureComponent* GTCapturer = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
+		if (GTCapturer == nullptr)
+		{
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
+		}
+
+		FTransform Velocity = FTransform(Rot, Loc);
+		GTCapturer->SetVelocity(Velocity);
+		return FExecStatus::OK();
 	}
 	return FExecStatus::InvalidArgument;
 }
@@ -584,9 +611,7 @@ FExecStatus FCameraCommandHandler::MoveActor(const TArray<FString>& Args)
 		//Pawn->SetActorLocation(NewLocation);
 
 		UGTCaptureComponent* GTCapturer = FCaptureManager::Get().GetCamera(0);
-		FTransform Velocity;
-		Velocity.SetLocation(direction*norm);
-		Velocity.SetRotation(Rot.Quaternion());
+		FTransform Velocity = FTransform(Rot, direction*norm);
 		GTCapturer->SetVelocity(Velocity);
 
 #if 0

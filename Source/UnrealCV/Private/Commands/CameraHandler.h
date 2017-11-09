@@ -23,6 +23,9 @@ public:
 	/** vset /camera/[id]/transform */
 	FExecStatus	SetCameraTransform(const TArray<FString>& Args);
 
+	/** vset /camera/[id]/move */
+	FExecStatus	MoveCamera(const TArray<FString>& Args);
+
 	/** vget /actor/rotation, follow the concept of actor in RL */
 	FExecStatus GetActorRotation(const TArray<FString>& Args);
 	/** vget /actor/location */
