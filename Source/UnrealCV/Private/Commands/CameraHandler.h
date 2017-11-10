@@ -20,6 +20,8 @@ public:
 	/** vset /camera/[id]/rotation */
 	FExecStatus	SetCameraRotation(const TArray<FString>& Args);
 
+	/** vget /camera/[id]/transform */
+	FExecStatus GetCameraTransform(const TArray<FString>& Args);
 	/** vset /camera/[id]/transform */
 	FExecStatus	SetCameraTransform(const TArray<FString>& Args);
 
@@ -30,6 +32,8 @@ public:
 	FExecStatus GetActorRotation(const TArray<FString>& Args);
 	/** vget /actor/location */
 	FExecStatus GetActorLocation(const TArray<FString>& Args);
+	/** vget /actor/transform */
+	FExecStatus GetActorTransform(const TArray<FString>& Args);
 
 	/** vget /camera/view */
 	FExecStatus GetScreenshot(const TArray<FString>& Args);

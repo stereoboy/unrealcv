@@ -20,7 +20,7 @@ struct FGTCaptureTask
  */
 
 //FIXME
-#define PARAM_MOVE_ANIM_COUNT 50 // tuning parameter considering unrealcv, robot, ROS
+#define PARAM_MOVE_ANIM_COUNT 20 // tuning parameter considering unrealcv, robot, ROS
 #define PARAM_MAX_CAM_LINEAR_SPEED 10    // tuning parameter considering unrealcv, robot, ROS
 #define PARAM_MAX_CAM_ANGULAR_SPEED 10   // tuning parameter considering unrealcv, robot, ROS
 UCLASS()

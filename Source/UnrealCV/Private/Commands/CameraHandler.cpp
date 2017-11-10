@@ -106,6 +106,10 @@ void FCameraCommandHandler::RegisterCommands()
 	Help = "Get actor rotation [pitch, yaw, roll]";
 	CommandDispatcher->BindCommand("vget /actor/rotation", Cmd, Help);
 
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::GetActorTransform);
+	Help = "Get actor transform [x, y, z, pitch, yaw, roll]";
+	CommandDispatcher->BindCommand("vget /actor/transform", Cmd, Help);
+
 	Help = "Return raw binary image data, instead of the image filename";
 	Cmd = FDispatcherDelegate::CreateLambda([](const TArray<FString>& Args) { return GetPngBinary(Args, TEXT("lit")); });
 	CommandDispatcher->BindCommand("vget /camera/[uint]/lit png", Cmd, Help);
@@ -125,6 +129,10 @@ void FCameraCommandHandler::RegisterCommands()
 	// for TEST
 	Cmd = FDispatcherDelegate::CreateStatic(GetImgBinary);
 	CommandDispatcher->BindCommand("vget /camera/[uint]/lit bin", Cmd, Help);
+
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::GetCameraTransform);
+	Help = "Get camera transform [x, y, z, pitch, yaw, roll] of camera [id]";
+	CommandDispatcher->BindCommand("vget /camera/[uint]/transform", Cmd, Help);
 
 	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::SetCameraTransform);
 	Help = "Move camera to [x, y, z, pitch, yaw, roll] of camera [id]";
@@ -223,18 +231,15 @@ FExecStatus FCameraCommandHandler::SetCameraLocation(const TArray<FString>& Args
 		float X = FCString::Atof(*Args[1]), Y = FCString::Atof(*Args[2]), Z = FCString::Atof(*Args[3]);
 		FVector Location = FVector(X, Y, Z);
 
-		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
-		if (CameraId < cameras.Num())
+		UGTCameraCaptureComponent* GTCapturer = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
+		if (GTCapturer == nullptr)
 		{
-			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
-			camera->SetRelativeLocation(Location);
-			return FExecStatus::OK();
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
 		}
-		else
-		{
-			return FExecStatus::Error("Camera %d can not be found.");
-		}
+
+		UCameraComponent* camera = GTCapturer->GetCameraComponent();
+		camera->SetRelativeLocation(Location);
+		return FExecStatus::OK();
 	}
 	return FExecStatus::InvalidArgument;
 }
@@ -247,18 +252,15 @@ FExecStatus FCameraCommandHandler::SetCameraRotation(const TArray<FString>& Args
 		float Pitch = FCString::Atof(*Args[1]), Yaw = FCString::Atof(*Args[2]), Roll = FCString::Atof(*Args[3]);
 		FRotator Rotator = FRotator(Pitch, Yaw, Roll);
 
-		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
-		if (CameraId < cameras.Num())
+		UGTCameraCaptureComponent* GTCapturer = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
+		if (GTCapturer == nullptr)
 		{
-			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
-			camera->SetRelativeRotation(Rotator);
-			return FExecStatus::OK();
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
 		}
-		else
-		{
-			return FExecStatus::Error("Camera %d can not be found.");
-		}
+
+		UCameraComponent* camera = GTCapturer->GetCameraComponent();
+		camera->SetRelativeRotation(Rotator);
+		return FExecStatus::OK();
 	}
 	return FExecStatus::InvalidArgument;
 }
@@ -273,19 +275,15 @@ FExecStatus FCameraCommandHandler::SetCameraTransform(const TArray<FString>& Arg
 		float Pitch = FCString::Atof(*Args[4]), Yaw = FCString::Atof(*Args[5]), Roll = FCString::Atof(*Args[6]);
 		FRotator Rotator = FRotator(Pitch, Yaw, Roll);
 
-		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
-		if (CameraId < cameras.Num())
+		UGTCameraCaptureComponent* GTCapturer = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
+		if (GTCapturer == nullptr)
 		{
-			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
-			camera->SetRelativeLocation(Location);
-			camera->SetRelativeRotation(Rotator);
-			return FExecStatus::OK();
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
 		}
-		else
-		{
-			return FExecStatus::Error("Camera %d can not be found.");
-		}
+
+		UCameraComponent* camera = GTCapturer->GetCameraComponent();
+		camera->SetRelativeTransform(FTransform(Rotator, Location));
+		return FExecStatus::OK();
 	}
 	return FExecStatus::InvalidArgument;
 }
@@ -318,20 +316,16 @@ FExecStatus FCameraCommandHandler::GetCameraRotation(const TArray<FString>& Args
 	if (Args.Num() == 1)
 	{
 		int32 CameraId = FCString::Atoi(*Args[0]);
-		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		FRotator CameraRotation;
-		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
-		if (CameraId < cameras.Num())
+		UGTCameraCaptureComponent* GTCapturer = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
+		if (GTCapturer == nullptr)
 		{
-			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
-			CameraRotation = camera->GetRelativeTransform().GetRotation().Rotator();
-			FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraRotation.Pitch, CameraRotation.Yaw, CameraRotation.Roll);
-			return FExecStatus::OK(Message);
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
 		}
-		else
-		{
-			return FExecStatus::Error("Camera %d can not be found.");
-		}
+
+		UCameraComponent* camera = GTCapturer->GetCameraComponent();
+		FRotator CameraRotation = camera->GetRelativeTransform().Rotator();
+		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraRotation.Pitch, CameraRotation.Yaw, CameraRotation.Roll);
+		return FExecStatus::OK(Message);
 	}
 	return FExecStatus::Error("Number of arguments incorrect");
 }
@@ -341,24 +335,40 @@ FExecStatus FCameraCommandHandler::GetCameraLocation(const TArray<FString>& Args
 	if (Args.Num() == 1)
 	{
 		int32 CameraId = FCString::Atoi(*Args[0]);
-		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		TArray<UActorComponent*> cameras = Pawn->GetComponentsByClass(UCameraComponent::StaticClass());
-		if (CameraId < cameras.Num())
+		UGTCameraCaptureComponent* GTCapturer = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
+		if (GTCapturer == nullptr)
 		{
-			UCameraComponent* camera = Cast<UCameraComponent>(cameras[CameraId]);
-			FVector CameraLocation = camera->GetRelativeTransform().GetLocation();
-			FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraLocation.X, CameraLocation.Y, CameraLocation.Z);
-			return FExecStatus::OK(Message);
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
 		}
-		else
-		{
-			return FExecStatus::Error("Camera %d can not be found.");
-		}
+
+		UCameraComponent* camera = GTCapturer->GetCameraComponent();
+		FVector CameraLocation = camera->GetRelativeTransform().GetLocation();
+		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraLocation.X, CameraLocation.Y, CameraLocation.Z);
+		return FExecStatus::OK(Message);
 	}
 	return FExecStatus::Error("Number of arguments incorrect");
 }
 
+FExecStatus FCameraCommandHandler::GetCameraTransform(const TArray<FString>& Args)
+{
+	if (Args.Num() == 1)
+	{
+		int32 CameraId = FCString::Atoi(*Args[0]);
+		UGTCameraCaptureComponent* GTCapturer = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
+		if (GTCapturer == nullptr)
+		{
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
+		}
 
+		UCameraComponent* camera = GTCapturer->GetCameraComponent();
+		FVector CameraLocation = camera->GetRelativeTransform().GetLocation();
+		FRotator CameraRotation = camera->GetRelativeTransform().Rotator();
+		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f %.3f %.3f %.3f"), CameraLocation.X, CameraLocation.Y, CameraLocation.Z, CameraRotation.Pitch, CameraRotation.Yaw, CameraRotation.Roll);
+		return FExecStatus::OK(Message);
+
+	}
+	return FExecStatus::Error("Number of arguments incorrect");
+}
 
 FExecStatus FCameraCommandHandler::GetObjectInstanceMask(const TArray<FString>& Args)
 {
@@ -482,6 +492,15 @@ FExecStatus FCameraCommandHandler::GetActorLocation(const TArray<FString>& Args)
 	APawn* Pawn = FUE4CVServer::Get().GetPawn();
 	FVector CameraLocation = Pawn->GetActorLocation();
 	FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraLocation.X, CameraLocation.Y, CameraLocation.Z);
+	return FExecStatus::OK(Message);
+}
+
+FExecStatus FCameraCommandHandler::GetActorTransform(const TArray<FString>& Args)
+{
+	APawn* Pawn = FUE4CVServer::Get().GetPawn();
+	FVector Loc = Pawn->GetActorTransform().GetLocation();
+	FRotator Rot = Pawn->GetActorTransform().Rotator();
+	FString Message = FString::Printf(TEXT("%.3f %.3f %.3f %.3f %.3f %.3f"), Loc.X, Loc.Y, Loc.Z, Rot.Pitch, Rot.Yaw, Rot.Roll);
 	return FExecStatus::OK(Message);
 }
 
