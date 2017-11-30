@@ -498,6 +498,39 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 
 			this->MoveAnimCountFromRemote--;
 		}
+		else if (this->IsMoveToTarget) {
+			FTransform current = this->CameraComponent->GetRelativeTransform();
+			FTransform target  = this->TargetPose;
+			FVector linear_offset, new_loc;
+			FVector direction, delta_linear;
+			FRotator new_rot;
+			FRotator angular_diff, delta_angular;
+			FVector  angular_diff_vec, temp;
+			float norm, delta;
+
+			linear_offset = target.GetLocation() - current.GetLocation();
+			linear_offset.ToDirectionAndLength(direction, norm);
+			delta = FMath::Min<float>(norm, DeltaTime*PARAM_MAX_CAM_LINEAR_SPEED);
+			delta_linear = delta*direction;
+			new_loc = current.GetLocation() + delta_linear;
+			this->CameraComponent->AddRelativeLocation(delta_linear);
+
+			angular_diff = target.Rotator() - current.Rotator();
+			angular_diff_vec = FVector(angular_diff.Pitch, angular_diff.Yaw, angular_diff.Roll);
+			angular_diff_vec.ToDirectionAndLength(direction, norm);
+			delta = FMath::Min<float>(norm, DeltaTime*PARAM_MAX_CAM_ANGULAR_SPEED);
+			temp = delta*direction;
+			delta_angular = FRotator(temp.X, temp.Y, temp.Z);
+			new_rot = current.Rotator() + delta_angular;
+			this->CameraComponent->AddRelativeRotation(delta_angular);
+			UE_LOG(LogUnrealCV, Log, TEXT("MoveToTargetPose(%f): (%f %f %f), (%f %f %f)"), DeltaTime, new_loc.X, new_loc.Y, new_loc.Z,
+																						new_rot.Pitch, new_rot.Yaw, new_rot.Roll);
+			if (FVector::PointsAreSame(new_loc, target.GetLocation()) && target.Rotator().Equals(new_rot)) {
+				/* arrived at the target destinatoin */
+				this->IsMoveToTarget = false;
+				this->CameraComponent->SetRelativeTransform(target);
+			}
+		}
 
 		const FRotator CameraViewRotation = this->CameraComponent->GetComponentRotation();
 		const FVector CameraViewLocation = this->CameraComponent->GetComponentLocation();

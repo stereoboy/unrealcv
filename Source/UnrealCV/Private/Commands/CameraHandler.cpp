@@ -281,8 +281,12 @@ FExecStatus FCameraCommandHandler::SetCameraTransform(const TArray<FString>& Arg
 			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
 		}
 
+#if 0
 		UCameraComponent* camera = GTCapturer->GetCameraComponent();
 		camera->SetRelativeTransform(FTransform(Rotator, Location));
+#else
+		GTCapturer->SetTargetPose(FTransform(Rotator, Location));
+#endif
 		return FExecStatus::OK();
 	}
 	return FExecStatus::InvalidArgument;
@@ -324,6 +328,7 @@ FExecStatus FCameraCommandHandler::GetCameraRotation(const TArray<FString>& Args
 
 		UCameraComponent* camera = GTCapturer->GetCameraComponent();
 		FRotator CameraRotation = camera->GetRelativeTransform().Rotator();
+		FVector loc = camera->GetComponentTransform().GetLocation();
 		FString Message = FString::Printf(TEXT("%.3f %.3f %.3f"), CameraRotation.Pitch, CameraRotation.Yaw, CameraRotation.Roll);
 		return FExecStatus::OK(Message);
 	}
