@@ -85,7 +85,7 @@ private:
 	FTcpListener* TcpListener = NULL;
 
 	~UNetworkManager();
-	virtual void BeginDestroy();
+	virtual void BeginDestroy() override;
 
 	/** (Debug) Start a service that echo whatever it got, for debug purpose */
 	bool StartEchoService(FSocket* ClientSocket, const FIPv4Endpoint& ClientEndpoint);
