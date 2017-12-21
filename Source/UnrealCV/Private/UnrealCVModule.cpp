@@ -28,8 +28,7 @@ void FUnrealCVPlugin::StartupModule()
 
 	FUE4CVServer &Server = FUE4CVServer::Get();
 	Server.RegisterCommandHandlers();
-
-	if (DeviceProfileName.Equals(TEXT("WindowsNoEditor")))
+	if (DeviceProfileName.Equals(TEXT("WindowsNoEditor")) || DeviceProfileName.Equals(TEXT("LinuxNoEditor")))
 		Server.Config.Port += 1;
 
 	Server.NetworkManager->Start(Server.Config.Port);
