@@ -37,7 +37,7 @@ protected:
 	bool IsMoveToTarget = false;
 
 public:
-	static UGTCaptureComponent* Create(APawn* Pawn, TArray<FString> Modes);
+	static UGTCaptureComponent* Create(FName Name, APawn* Pawn, TArray<FString> Modes);
 
 	static UMaterial* GetMaterial(FString ModeName);
 
@@ -78,7 +78,7 @@ private:
 	AActor* CameraActor;
 	UCameraComponent* CameraComponent;
 public:
-	static UGTCameraCaptureComponent* Create(APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes);
+	static UGTCameraCaptureComponent* Create(FName Name, APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes);
 
 	UCameraComponent* GetCameraComponent() { return CameraComponent; }
 	// virtual void Tick(float DeltaTime) override; // TODO

@@ -111,10 +111,10 @@ UMaterial* UGTCaptureComponent::GetMaterial(FString InModeName = TEXT(""))
 /**
 Attach a GTCaptureComponent to a pawn
  */
-UGTCaptureComponent* UGTCaptureComponent::Create(APawn* InPawn, TArray<FString> Modes)
+UGTCaptureComponent* UGTCaptureComponent::Create(FName Name, APawn* InPawn, TArray<FString> Modes)
 {
 	UWorld* World = FUE4CVServer::Get().GetGameWorld();
-	UGTCaptureComponent* GTCapturer = NewObject<UGTCaptureComponent>();
+	UGTCaptureComponent* GTCapturer = NewObject<UGTCaptureComponent>((UObject *)GetTransientPackage(), Name);
 
 	GTCapturer->bIsActive = true;
 	// check(GTCapturer->IsComponentTickEnabled() == true);
@@ -380,10 +380,10 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 	}
 }
 
-UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes)
+UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(FName Name, APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes)
 {
 	UWorld* World = FUE4CVServer::Get().GetGameWorld();
-	UGTCameraCaptureComponent* GTCapturer = NewObject<UGTCameraCaptureComponent>();
+	UGTCameraCaptureComponent* GTCapturer = NewObject<UGTCameraCaptureComponent>((UObject *)GetTransientPackage(), Name);
 
 	GTCapturer->bIsActive = true;
 	// check(GTCapturer->IsComponentTickEnabled() == true);
