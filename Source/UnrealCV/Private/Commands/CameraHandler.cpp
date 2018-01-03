@@ -614,10 +614,6 @@ FExecStatus FCameraCommandHandler::MoveActor(const TArray<FString>& Args)
 		// Check invalid location and move back a bit.
 
 		APawn* Pawn = FUE4CVServer::Get().GetPawn();
-		//Pawn->AddControllerPitchInput(Pitch);
-		//Pawn->AddControllerYawInput(Yaw);
-		//Pawn->AddControllerRollInput(Roll);
-
 		FRotator CtrlRot = Pawn->GetControlRotation();
 		FVector foward = UKismetMathLibrary::GetForwardVector(CtrlRot);
 		FVector right = UKismetMathLibrary::GetRightVector(CtrlRot);
@@ -630,13 +626,12 @@ FExecStatus FCameraCommandHandler::MoveActor(const TArray<FString>& Args)
 
 		//Pawn->AddMovementInput(offset);
 		//float modified_norm = FMath::Min<float>(norm, 5.0);
-
 		//FVector NewLocation = Pawn->GetActorLocation() + direction*norm;
 		//Pawn->SetActorLocation(NewLocation);
 
-		UGTCaptureComponent* GTCapturer = FCaptureManager::Get().GetCamera(0);
+		URemoteMovementComponent* Remote = FCaptureManager::Get().GetActor(0);
 		FTransform Velocity = FTransform(Rot, direction*norm);
-		GTCapturer->SetVelocity(Velocity);
+		Remote->SetVelocityCmd(Velocity);
 
 #if 0
 		static const FName MoveAnimCountFromRemote(TEXT("MoveAnimCountFromRemote"));

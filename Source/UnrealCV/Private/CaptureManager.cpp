@@ -13,7 +13,7 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 	// TODO: Get the list from GTCaptureComponent
 
 	CaptureComponentList.Empty();
-
+#if 0
 	{
 		TArray<FString> SupportedModes;
 		SupportedModes.Add(TEXT("lit")); // This is lit
@@ -33,21 +33,32 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 		CaptureComponentList.Add(RightEye);
 		*/
 	}
+#endif
+
+	URemoteMovementComponent* actor = URemoteMovementComponent::Create(FName(TEXT("Main_Actor")), Pawn);
+	ActorList.Add(actor);
 
 	UE_LOG(LogUnrealCV, Log, TEXT("Camera Component List"));
 	TArray<UActorComponent*> cameras = (Pawn->GetComponentsByClass(UCameraComponent::StaticClass()));
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 	for (int32 idx = 0; idx < cameras.Num(); ++idx)
 	{
-		TArray<FString> SupportedModes = {TEXT("lit"), TEXT("depth") };
-
 		UCameraComponent* camera = Cast<UCameraComponent>(cameras[idx]);
+		TArray<FString> SupportedModes = {TEXT("lit")};
+		if (camera->GetName().Compare(TEXT("Camera")) == 0)
+		{
+			UGTCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
+			CaptureComponentList.Add(camCom);
+		}
+		else if (camera->GetName().Compare(TEXT("RGBDCamera")) == 0)
+		{
+			SupportedModes.Add(TEXT("depth"));
+			UGTCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
+			CaptureComponentList.Add(camCom);
+		}
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetFullName());
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetName());
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetFullGroupName(false));
-
-		UGTCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
-		CaptureComponentList.Add(camCom);
 	}
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 }
@@ -62,4 +73,14 @@ UGTCaptureComponent* FCaptureManager::GetCamera(int32 CameraId)
 	{
 		return nullptr;
 	}
+}
+
+URemoteMovementComponent* FCaptureManager::GetActor(int32 ActorId)
+{
+	if (ActorId < ActorList.Num() && ActorId >= 0)
+	{
+		return ActorList[ActorId];
+	}
+	else
+		return nullptr;
 }
