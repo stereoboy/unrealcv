@@ -64,13 +64,14 @@ void URemoteMovementComponent::BeginPlay()
 	Super::BeginPlay();
 
 	/*
-	//https://answers.unrealengine.com/questions/704875/cannot-set-max-fps-in-417.html
+	// https://answers.unrealengine.com/questions/704875/cannot-set-max-fps-in-417.html
 	// This code write the setting on GameUserSettings.ini
 	UGameUserSettings* Settings = GEngine->GetGameUserSettings();
 	Settings->SetFrameRateLimit(60.0f);
 	Settings->ApplySettings(true);
 	*/
 	/*
+	// https://answers.unrealengine.com/questions/221428/console-exec-command-from-c-fails-to-run.html
 	APlayerController* Controller = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	if (Controller)
 	{
