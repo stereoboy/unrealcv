@@ -90,6 +90,10 @@ void FCameraCommandHandler::RegisterCommands()
 	Help = "Get projection matrix from camera [id]";
 	CommandDispatcher->BindCommand("vget /camera/[uint]/proj_matrix", Cmd, Help);
 
+	Cmd = FDispatcherDelegate::CreateRaw(this, &FCameraCommandHandler::SetCameraProjMatrix);
+	Help = "Get projection matrix from camera [id]";
+	CommandDispatcher->BindCommand("vset /camera/[uint]/proj_matrix [float] [float] [float]", Cmd, Help);
+
 	Cmd = FDispatcherDelegate::CreateRaw(&FPlayerViewMode::Get(), &FPlayerViewMode::SetMode);
 	Help = "Set ViewMode to (lit, normal, depth, object_mask)";
 	CommandDispatcher->BindCommand("vset /viewmode [str]", Cmd, Help); // Better to check the correctness at compile time
@@ -201,6 +205,27 @@ FExecStatus FCameraCommandHandler::GetCameraProjMatrix(const TArray<FString>& Ar
 	FString Message = FString::Printf(TEXT("%.3f %d %d"), FOV, Width, Height);
 
 	return FExecStatus::OK(Message);
+}
+
+FExecStatus FCameraCommandHandler::SetCameraProjMatrix(const TArray<FString>& Args)
+{
+	if (Args.Num() == 4) // ID, Width, Height, FOV
+	{
+		int32 CameraId = FCString::Atoi(*Args[0]);
+		int32 Width = FCString::Atoi(*Args[1]), Height = FCString::Atoi(*Args[2]);
+		float FOV = FCString::Atof(*Args[3]);
+
+		UGTCaptureComponent* Camera;
+		Camera = FCaptureManager::Get().GetCamera(CameraId);
+		if (Camera == nullptr)
+		{
+			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
+		}
+		Camera->SetTargetFieldOfView(FOV);
+
+		return FExecStatus::OK();
+	}
+	return FExecStatus::InvalidArgument;
 }
 
 FExecStatus FCameraCommandHandler::MoveTo(const TArray<FString>& Args)

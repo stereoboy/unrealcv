@@ -20,9 +20,14 @@ struct FGTCaptureTask
  */
 
 //FIXME
-#define PARAM_MOVE_ANIM_COUNT 20 // tuning parameter considering unrealcv, robot, ROS
-#define PARAM_MAX_CAM_LINEAR_SPEED 20    // tuning parameter considering unrealcv, robot, ROS
+#define PARAM_MOVE_ANIM_COUNT       20   // tuning parameter considering unrealcv, robot, ROS
+#define PARAM_MAX_CAM_LINEAR_SPEED  20   // tuning parameter considering unrealcv, robot, ROS
 #define PARAM_MAX_CAM_ANGULAR_SPEED 20   // tuning parameter considering unrealcv, robot, ROS
+#define PARAM_MAX_CAM_ZOOM_SPEED    20	 //	tuning parameter considering unrealcv, robot, ROS
+
+#define PARAM_MIN_CAM_ZOOM_FOV		10
+#define PARAM_MAX_CAM_ZOOM_FOV		120
+
 UCLASS()
 class UNREALCV_API UGTCaptureComponent : public USceneComponent // , public FTickableGameObject
 {
@@ -34,7 +39,9 @@ protected:
 	int32 MoveAnimCountFromRemote = 0;
 
 	FTransform TargetPose;
+	float TargetFOVAngle;
 	bool IsMoveToTarget = false;
+	bool IsZoomToTarget = false;
 
 public:
 	static UGTCaptureComponent* Create(FName Name, APawn* Pawn, TArray<FString> Modes);
@@ -59,6 +66,7 @@ public:
 	void GetSize(const FString& Mode, int32& Width, int32& Height);
 	void SetVelocity(const FTransform& Velocity);
 	void SetTargetPose(const FTransform& TargetPose);
+	void SetTargetFieldOfView(const float TargetFOV);
 protected:
 	const bool bIsTicking = true;
 

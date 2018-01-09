@@ -280,6 +280,12 @@ void UGTCaptureComponent::GetFieldOfView(const FString& Mode, float& FOV)
 	return;
 }
 
+void UGTCaptureComponent::SetTargetFieldOfView(const float TargetFOV)
+{
+	this->TargetFOVAngle = FMath::Clamp<float>(TargetFOV, PARAM_MIN_CAM_ZOOM_FOV, PARAM_MAX_CAM_ZOOM_FOV);
+	this->IsZoomToTarget = true;
+}
+
 void UGTCaptureComponent::GetSize(const FString& Mode, int32& Width, int32& Height)
 {
 	USceneCaptureComponent2D* CaptureComponent = CaptureComponents.FindRef(Mode);
@@ -405,6 +411,7 @@ UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(FName Name, APawn* 
 		USceneCaptureComponent2D* CaptureComponent = NewObject<USceneCaptureComponent2D>();
 
 		CaptureComponent->bIsActive = false; // Disable it by default for performance consideration
+		//CaptureComponent->SetVisibility(false);
 		GTCapturer->CaptureComponents.Add(Mode, CaptureComponent);
 
 		// CaptureComponent needs to be attached to somewhere immediately, otherwise it will be gc-ed
@@ -529,6 +536,22 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 				/* arrived at the target destinatoin */
 				this->IsMoveToTarget = false;
 				this->CameraComponent->SetRelativeTransform(target);
+			}
+		}
+
+		if (this->IsZoomToTarget) {
+			float current_fov = this->CameraComponent->FieldOfView;
+			float fov_diff = this->TargetFOVAngle - current_fov;
+			float direction = (fov_diff > 0) ? 1.0 : -1.0;
+			float delta = FMath::Min<float>(FMath::Abs(fov_diff), DeltaTime*PARAM_MAX_CAM_ZOOM_SPEED);
+			float delta_fov = delta * direction;
+			float new_fov = current_fov + delta_fov;
+			this->CameraComponent->SetFieldOfView(new_fov);
+			UE_LOG(LogUnrealCV, Log, TEXT("MoveToTargetPose(%f) delta(%f): (%f)->(%f)"), DeltaTime, delta, current_fov, new_fov);
+
+			if (FMath::IsNearlyZero(delta)) {
+				this->IsZoomToTarget = false;
+				this->CameraComponent->SetFieldOfView(this->TargetFOVAngle);
 			}
 		}
 
