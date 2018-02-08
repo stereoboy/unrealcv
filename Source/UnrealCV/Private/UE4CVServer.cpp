@@ -177,6 +177,7 @@ void FUE4CVServer::ProcessPendingRequest()
 			FExecStatus::BinaryArrayFromString(Header, ReplyData);
 
 			ReplyData += ExecStatus.GetData();
+			UE_LOG(LogUnrealCV, Warning, TEXT("First Byte: %d"), ExecStatus.GetData()[0]);
 			NetworkManager->SendData(ReplyData);
 		});
 		CommandDispatcher->ExecAsync(Request.Message, CallbackDelegate);

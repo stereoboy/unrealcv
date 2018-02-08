@@ -565,6 +565,37 @@ FExecStatus GetPngBinary(const TArray<FString>& Args, const FString& Mode)
 
 FExecStatus GetImgBinary(const TArray<FString>& Args)
 {
+	int32 CameraId = FCString::Atoi(*Args[0]);
+/*
+	if (CameraId == 0)
+	{
+		TArray<FColor> ImageData;
+		int32 Width = GEngine->GameViewport->Viewport->GetSizeXY().X;
+		int32 Height = GEngine->GameViewport->Viewport->GetSizeXY().Y;
+		//bool res = GEngine->GameViewport->Viewport->ReadPixels(ImageData);
+		bool bScreenshotSuccessful = GetViewportScreenShot(InViewport, ImageData);
+		if (bScreenshotSuccessful) {
+			FIntVector Size(InViewport->GetSizeXY().X, InViewport->GetSizeXY().Y, 0);
+			TArray<uint8> CompressedBitmap;
+			FString ScreenShotName = TEXT("out.png");
+			FImageUtils::CompressImageArray(Size.X, Size.Y, ImageData, CompressedBitmap);
+			FFileHelper::SaveArrayToFile(CompressedBitmap, *ScreenShotName);
+		}
+
+		int32 count = ImageData.Num();
+		if (count == 0)
+		{
+			return FExecStatus::Error(FString::Printf(TEXT("Failed to read lit data.")));
+		}
+		TArray<uint8> BinaryData;
+		BinaryData.AddUninitialized(Width*Height * sizeof(FColor));
+		FMemory::Memcpy(BinaryData.GetData(), ImageData.GetData(), Width*Height * sizeof(FColor));
+
+		UE_LOG(LogUnrealCV, Log, TEXT("GetImgBinary %dx%d"), Width, Height);
+		return FExecStatus::Binary(BinaryData);
+
+	}
+	*/
 	UGTCaptureComponent* Camera;
 	FExecStatus Status = ParseCamera(Args, Camera);
 	if (Status != FExecStatusType::OK) return Status;
