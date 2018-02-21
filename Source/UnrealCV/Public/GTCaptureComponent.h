@@ -1,6 +1,8 @@
 #pragma once
 #include "Object.h"
 #include "UE4CVServer.h"
+#include "ROSBRidgeHandler.h"
+#include "ROSBridgePublisher.h"
 #include "GTCaptureComponent.generated.h"
 
 struct FGTCaptureTask
@@ -82,9 +84,22 @@ UCLASS()
 class UNREALCV_API UGTCameraCaptureComponent : public UGTCaptureComponent // , public FTickableGameObject
 {
 	GENERATED_BODY()
-private:
+protected:
 	AActor* CameraActor;
 	UCameraComponent* CameraComponent;
+
+	// variables for UROSBridge
+	FString ROSTopic;
+	FString ROSFrameId;
+	TSharedPtr<FROSBridgeHandler> ROSHandler;
+	TSharedPtr<FROSBridgePublisher> TfPublisher;
+
+	TSharedPtr<FROSBridgePublisher> ImageCameraInfoPublisher;
+	TSharedPtr<FROSBridgePublisher> ImagePublisher;
+
+	TSharedPtr<FROSBridgePublisher> DepthCameraInfoPublisher;
+	TSharedPtr<FROSBridgePublisher> DepthPublisher;
+
 public:
 	static UGTCameraCaptureComponent* Create(FName Name, APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes);
 
@@ -92,4 +107,14 @@ public:
 	// virtual void Tick(float DeltaTime) override; // TODO
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override; // TODO
 
+	// functions for UROSBridge
+	void SetUROSBridge(FString InROSTopic, FString InROSFrameId);
+
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+
+protected:
+	void ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
+	void PublishImage(void);
+	void PublishDepth(void);
 };

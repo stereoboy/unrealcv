@@ -92,23 +92,26 @@ FExecStatus CaptureWithBuiltIn(const FString& Filename)
 
 	FScreenshotRequest::RequestScreenshot(FullFilename, false, false); // This is an async operation
 	// It is important to pass in the FullFilename
-
+/*
 	// Implement 2, Start async and query
 	FPromiseDelegate PromiseDelegate = FPromiseDelegate::CreateLambda([FullFilename]()
 	{
 		if (FScreenshotRequest::IsScreenshotRequested())
 		{
+			UE_LOG(LogUnrealCV, Warning, TEXT("FPromiseDelegate::CreateLambda A"));
 			return FExecStatus::Pending();
 		}
 		else
 		{
+			UE_LOG(LogUnrealCV, Warning, TEXT("FPromiseDelegate::CreateLambda B"));
 			FString DiskFilename = IFileManager::Get().GetFilenameOnDisk(*FullFilename); // This is very important
 			// See: https://wiki.unrealengine.com/Packaged_Game_Paths,_Obtain_Directories_Based_on_Executable_Location.
 			return FExecStatus::OK(DiskFilename);
 		}
 	});
-
-	FExecStatus ExecStatusQuery = FExecStatus::AsyncQuery(FPromise(PromiseDelegate));
+*/
+	//FExecStatus ExecStatusQuery = FExecStatus::AsyncQuery(FPromise(PromiseDelegate));
+	FExecStatus ExecStatusQuery = FExecStatus::OK(TEXT("OK"));
 	return ExecStatusQuery;
 }
 
