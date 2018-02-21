@@ -1,25 +1,31 @@
 {
-    "FileVersion" : 3,
-    "Version" : 4,
+    "FileVersion": 3,
+    "Version": 4,
     "VersionName": "0.3.9",
     "FriendlyName": "Unreal CV",
     "Description": "UnrealCV is a plugin to connect computer vision algorithm and the games built by Unreal Engine",
-    "Category" : "Science",
+    "Category": "Science",
     "CreatedBy": "Weichao Qiu",
     "CreatedByURL": "http://unrealcv.org",
-    "DocsURL" : "http://docs.unrealcv.org",
-    "MarketplaceURL" : "",
-    "SupportURL" : "",
-    "EnabledByDefault" : true,
+    "DocsURL": "http://docs.unrealcv.org",
+    "MarketplaceURL": "",
+    "SupportURL": "",
+    "EnabledByDefault": true,
     "CanContainContent": true,
-    "IsBetaVersion" : true,
-    "Installed" : true,
-    "Modules" :
-    [
+    "IsBetaVersion": true,
+    "Installed": false,
+    "Modules": [
         {
             "Name": "UnrealCV",
-            "Type" : "Runtime",
-            "LoadingPhase" : "PreDefault"
+            "Type": "Runtime",
+            "LoadingPhase": "Default"
+        }
+    ],
+    "Plugins":
+    [
+        {
+            "Name": "UROSBridge",
+            "Enabled": true
         }
     ]
 }
