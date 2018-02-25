@@ -84,21 +84,30 @@ UCLASS()
 class UNREALCV_API UGTCameraCaptureComponent : public UGTCaptureComponent // , public FTickableGameObject
 {
 	GENERATED_BODY()
+
+
+	class FROSFloat32SubScriber : public FROSBridgeSubscriber
+	{
+		UGTCameraCaptureComponent* Component;
+	public:
+		FROSFloat32SubScriber(const FString& InTopic, UGTCameraCaptureComponent* Component);
+		~FROSFloat32SubScriber() override;
+		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
+		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
+	};
+
 protected:
 	AActor* CameraActor;
 	UCameraComponent* CameraComponent;
 
 	// variables for UROSBridge
+	FString ROSNamespace;
+	FString ROSName;
 	FString ROSTopic;
 	FString ROSFrameId;
 	TSharedPtr<FROSBridgeHandler> ROSHandler;
-	TSharedPtr<FROSBridgePublisher> TfPublisher;
 
-	TSharedPtr<FROSBridgePublisher> ImageCameraInfoPublisher;
-	TSharedPtr<FROSBridgePublisher> ImagePublisher;
-
-	TSharedPtr<FROSBridgePublisher> DepthCameraInfoPublisher;
-	TSharedPtr<FROSBridgePublisher> DepthPublisher;
+	FTransform InitialTransform;
 
 public:
 	static UGTCameraCaptureComponent* Create(FName Name, APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes);
@@ -108,10 +117,13 @@ public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override; // TODO
 
 	// functions for UROSBridge
-	void SetUROSBridge(FString InROSTopic, FString InROSFrameId);
+	void SetUROSBridge(FString InROSNamespace, FString InROSName, FString InROSFrameId);
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+
+	FString GetROSName(void) { return ROSName; }
+	FTransform GetInitialTransform(void) { return InitialTransform; }
 
 protected:
 	void ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);

@@ -48,15 +48,17 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 		if (camera->GetName().Compare(TEXT("Camera")) == 0)
 		{
 			UGTCameraCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
-			camCom->SetUROSBridge(TEXT("/ue4/main_cam"), TEXT("main_img_link"));
+			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("main_cam"), TEXT("main_img_link"));
 			CaptureComponentList.Add(camCom);
+			actor->AddCaptureComponent(camCom);
 		}
 		else if (camera->GetName().Compare(TEXT("RGBDCamera")) == 0)
 		{
 			SupportedModes.Add(TEXT("depth"));
 			UGTCameraCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
-			camCom->SetUROSBridge(TEXT("/ue4/rgbd_cam"), TEXT("rgbd_img_link"));
+			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("rgbd_cam"), TEXT("rgbd_img_link"));
 			CaptureComponentList.Add(camCom);
+			actor->AddCaptureComponent(camCom);
 		}
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetFullName());
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetName());

@@ -1,8 +1,11 @@
 #include "UnrealCVPrivate.h"
+#include "CaptureManager.h"
 #include "RemoteMovementComponent.h"
 #include "UE4ROSBridgeManager.h"
 #include "rosgraph_msgs/Clock.h"
 #include "geometry_msgs/TransformStamped.h"
+#include "tf2_msgs/TFMessage.h"
+#include "sensor_msgs/JointState.h"
 #include "nav_msgs/Odometry.h"
 #include "ROSHelper.h"
 
@@ -39,6 +42,64 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 	return;
 }
 
+URemoteMovementComponent::FROSJointStateSubScriber::FROSJointStateSubScriber(const FString& InTopic, URemoteMovementComponent* Component) :
+	FROSBridgeSubscriber(InTopic, TEXT("sensor_msgs/JointState"))
+{
+	this->Component = Component;
+}
+
+URemoteMovementComponent::FROSJointStateSubScriber::~FROSJointStateSubScriber()
+{
+};
+
+TSharedPtr<FROSBridgeMsg> URemoteMovementComponent::FROSJointStateSubScriber::ParseMessage
+(TSharedPtr<FJsonObject> JsonObject) const
+{
+	TSharedPtr<sensor_msgs::JointState> Message = MakeShareable<sensor_msgs::JointState>(new sensor_msgs::JointState());
+	Message->FromJson(JsonObject);
+	return StaticCastSharedPtr<FROSBridgeMsg>(Message);
+}
+
+void URemoteMovementComponent::FROSJointStateSubScriber::Callback(TSharedPtr<FROSBridgeMsg> InMsg)
+{
+	// downcast to subclass using StaticCastSharedPtr function
+	TSharedPtr<sensor_msgs::JointState> Message = StaticCastSharedPtr<sensor_msgs::JointState>(InMsg);
+
+	TArray<FString> Names = Message->GetName();
+	TArray<double> Positions = Message->GetPosition();
+
+	// do something with the message
+	for (UGTCameraCaptureComponent* Elem : this->Component->CaptureComponentList)
+	{
+		bool bSet = false;
+		FString ROSName = Elem->GetROSName();
+		FTransform InitialTransform = Elem->GetInitialTransform();
+		//float Z = InitialTransform.GetLocation().Z , Yaw = InitialTransform.Rotator().Yaw, Pitch = InitialTransform.Rotator().Pitch;
+		float Z = InitialTransform.GetLocation().Z, Yaw = 0.0, Pitch = 0.0;
+		for (int i = 0; i < Names.Num(); i++)
+		{
+			FString Name = Names[i];
+			double Position = Positions[i];
+			if (Name.Compare(ROSName + TEXT("_base_joint")) == 0) {
+				Z += FROSHelper::ConvertVectorROSToUE4(geometry_msgs::Vector3(0.0, 0.0, Position)).Z;
+				bSet = true;
+			}
+			else if (Name.Compare(ROSName + TEXT("_pan_joint")) == 0) {
+				Yaw += FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, 0.0, Position)).Yaw;
+				bSet = true;
+			}
+			else if (Name.Compare(ROSName + TEXT("_tilt_joint")) == 0) {
+				Pitch += FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, Position, 0.0)).Pitch;
+				bSet = true;
+			}
+		}
+		if (bSet) {
+			Elem->SetTargetPose(FTransform(FRotator(Pitch, Yaw, 0.0), FVector(0.0, 0.0, Z)));
+			UE_LOG(LogUnrealCV, Log, TEXT("Pitch: %f, Yaw: %f, Z: %f"), Pitch, Yaw, Z);
+		}
+	}
+}
+
 URemoteMovementComponent::URemoteMovementComponent()
 	:bIsTicking(false)
 {
@@ -70,17 +131,8 @@ void URemoteMovementComponent::SetVelocityCmd(const FTransform& InVelocityCmd)
 	this->MoveAnimCountFromRemote = PARAM_MOVE_ANIM_COUNT;
 }
 
-void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 {
-	// publish clock
-	float GameTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
-	uint64 GameSeconds = (int)GameTime;
-	uint64 GameUseconds = (GameTime - GameSeconds) * 1000000000;
-	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable
-	(new rosgraph_msgs::Clock(FROSTime(GameSeconds, GameUseconds)));
-	Handler->PublishMsg("/clock", Clock);
-
-	// publish tf and odometry
 	APawn* OwningPawn = Cast<APawn>(this->GetOwner());
 	std_msgs::Header Header(0, FROSTime(), "odom");
 
@@ -89,7 +141,8 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 	// publish tf
 	geometry_msgs::Transform transform = FROSHelper::ConvertTransformUE4ToROS(Transform);
 
-	TSharedPtr<geometry_msgs::TransformStamped> odomtrans = MakeShareable(new geometry_msgs::TransformStamped(Header, "base_footprint", transform));
+	TArray<geometry_msgs::TransformStamped> transforms = { geometry_msgs::TransformStamped(Header, "base_footprint", transform) };
+	TSharedPtr<tf2_msgs::TFMessage> odomtrans = MakeShareable(new tf2_msgs::TFMessage(transforms));
 	Handler->PublishMsg("/tf", odomtrans);
 
 	// publish odometry
@@ -106,11 +159,11 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 	};
 	geometry_msgs::PoseWithCovariance	posewithcov(pose, posecov);
 
-	geometry_msgs::Vector3 linear	= FROSHelper::ConvertVectorUE4ToROS((Transform.GetLocation() - PrevLinear)/DeltaTime);
-	FRotator AngularVel = FRotator(	(Transform.Rotator().Pitch	- PrevAngular.Pitch	)/ DeltaTime,
-									(Transform.Rotator().Yaw	- PrevAngular.Yaw	)/ DeltaTime,
-									(Transform.Rotator().Roll	- PrevAngular.Roll	)/ DeltaTime);
-	geometry_msgs::Vector3 angular	= FROSHelper::ConvertEulerAngleUE4ToROS(AngularVel);
+	geometry_msgs::Vector3 linear = FROSHelper::ConvertVectorUE4ToROS((Transform.GetLocation() - PrevLinear) / DeltaTime);
+	FRotator AngularVel = FRotator((Transform.Rotator().Pitch - PrevAngular.Pitch) / DeltaTime,
+		(Transform.Rotator().Yaw - PrevAngular.Yaw) / DeltaTime,
+		(Transform.Rotator().Roll - PrevAngular.Roll) / DeltaTime);
+	geometry_msgs::Vector3 angular = FROSHelper::ConvertEulerAngleUE4ToROS(AngularVel);
 	TArray<double> twistcov = {
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -128,6 +181,63 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 
 	PrevLinear = Transform.GetLocation();
 	PrevAngular = Transform.Rotator();
+}
+
+void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
+{
+	std_msgs::Header Header(0, FROSTime(), "");
+	TArray<FString> Names = { TEXT("main_cam_base_joint"), TEXT("main_cam_pan_joint"), TEXT("main_cam_tilt_joint") };
+	TArray<double> Positions;
+	TArray<double> Velocities;
+	TArray<double> Efforts;
+
+	Positions.Empty();
+	Velocities.Empty();
+	Efforts.Empty();
+
+	for (UGTCameraCaptureComponent* Elem : this->CaptureComponentList)
+	{
+		FString ROSName = Elem->GetROSName();
+		FTransform InitialTransform = Elem->GetInitialTransform();
+		//float Z = InitialTransform.GetLocation().Z , Yaw = InitialTransform.Rotator().Yaw, Pitch = InitialTransform.Rotator().Pitch;
+		float Z = InitialTransform.GetLocation().Z, Yaw = 0.0, Pitch = 0.0;
+		for (int i = 0; i < Names.Num(); i++)
+		{
+			FString Name = Names[i];
+			UCameraComponent* CameraComponent = Elem->GetCameraComponent();
+
+			if (Name.Compare(ROSName + TEXT("_base_joint")) == 0) {
+				Z = CameraComponent->GetRelativeTransform().GetLocation().Z - Z;
+				Positions.Add(FROSHelper::ConvertVectorUE4ToROS(FVector(0.0, 0.0, Z)).GetZ());
+			}
+			else if (Name.Compare(ROSName + TEXT("_pan_joint")) == 0) {
+				Yaw = CameraComponent->GetRelativeTransform().Rotator().Yaw - Yaw;
+				Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, Yaw, 0.0)).GetZ());
+			}
+			else if (Name.Compare(ROSName + TEXT("_tilt_joint")) == 0) {
+				Pitch = CameraComponent->GetRelativeTransform().Rotator().Pitch - Pitch;
+				Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(Pitch, 0.0, 0.0)).GetY());
+			}
+		}
+	}
+
+	TSharedPtr<sensor_msgs::JointState> jointstates = MakeShareable(new sensor_msgs::JointState(Header, Names, Positions, Velocities, Efforts));
+	Handler->PublishMsg("/ue4/robot/joint_states", jointstates);
+}
+
+void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	// publish clock
+	float GameTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
+	uint64 GameSeconds = (int)GameTime;
+	uint64 GameUseconds = (GameTime - GameSeconds) * 1000000000;
+	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable
+	(new rosgraph_msgs::Clock(FROSTime(GameSeconds, GameUseconds)));
+	Handler->PublishMsg("/clock", Clock);
+
+	ROSPublishOdom(DeltaTime);
+
+	ROSPublishJointState(DeltaTime);
 }
 
 void URemoteMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -192,17 +302,22 @@ void URemoteMovementComponent::BeginPlay()
 	// Add topic subscribers and publishers
 	// Add service clients and servers
 	// **** Create publishers here ****
-	Publisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/clock"), TEXT("rosgraph_msgs/Clock")));
+	TSharedPtr<FROSBridgePublisher> Publisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/clock"), TEXT("rosgraph_msgs/Clock")));
 	Handler->AddPublisher(Publisher);
 
-	OdomTfPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/tf"), TEXT("geometry_msgs/TransformStamped")));
+	TSharedPtr<FROSBridgePublisher> OdomTfPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/tf"), TEXT("tf2_msgs/TFMessage")));
 	Handler->AddPublisher(OdomTfPublisher);
-	OdomPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/odom"), TEXT("nav_msgs/Odometry")));
+	TSharedPtr<FROSBridgePublisher> OdomPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/odom"), TEXT("nav_msgs/Odometry")));
 	Handler->AddPublisher(OdomPublisher);
 
-	// Add topic subscribers and publishers
-	TSharedPtr<FROSTwistSubScriber> Subscriber = MakeShareable<FROSTwistSubScriber>(new FROSTwistSubScriber(TEXT("/ue4/robot/ctrl"), this));
-	Handler->AddSubscriber(Subscriber);
+	TSharedPtr<FROSBridgePublisher> JointStatePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/robot/joint_states"), TEXT("sensor_msgs/JointState")));
+	Handler->AddPublisher(JointStatePublisher);
+
+	// Add topic subscribers
+	TSharedPtr<FROSTwistSubScriber> TwistSubscriber = MakeShareable<FROSTwistSubScriber>(new FROSTwistSubScriber(TEXT("/ue4/robot/ctrl/move"), this));
+	Handler->AddSubscriber(TwistSubscriber);
+	TSharedPtr<FROSJointStateSubScriber> JointStateSubscriber = MakeShareable<FROSJointStateSubScriber>(new FROSJointStateSubScriber(TEXT("/ue4/robot/ctrl/joint_states"), this));
+	Handler->AddSubscriber(JointStateSubscriber);
 
 	// Connect to ROSBridge Websocket server.
 	Handler->Connect();

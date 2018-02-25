@@ -26,8 +26,20 @@ class UNREALCV_API URemoteMovementComponent : public UMovementComponent
 		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
 	};
 
+	class FROSJointStateSubScriber : public FROSBridgeSubscriber
+	{
+		friend class URemoteMovementComponent;
+		URemoteMovementComponent* Component;
+	public:
+		FROSJointStateSubScriber(const FString& InTopic, URemoteMovementComponent* Component);
+		~FROSJointStateSubScriber() override;
+		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
+		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
+	};
+
 protected:
 	URemoteMovementComponent();
+
 	FTransform VelocityCmd;
 	int32 MoveAnimCountFromRemote = 0;
 
@@ -39,10 +51,8 @@ protected:
 	FRotator PrevAngular;
 
 	TSharedPtr<FROSBridgeHandler> Handler;
-	TSharedPtr<FROSBridgePublisher> Publisher;
-	TSharedPtr<FROSBridgePublisher> OdomTfPublisher;
-	TSharedPtr<FROSBridgePublisher> OdomPublisher;
-	TSharedPtr<FROSTwistSubScriber> TwistSubScriber;
+
+	TArray<UGTCameraCaptureComponent*> CaptureComponentList;
 
 public:
 	static URemoteMovementComponent* Create(FName Name, APawn* Pawn);
@@ -57,6 +67,13 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
+	void AddCaptureComponent(UGTCameraCaptureComponent* Component) 
+	{
+		CaptureComponentList.Add(Component);
+	}
+
 protected:
+	void ROSPublishOdom(float DeltaTime);
+	void ROSPublishJointState(float DeltaTime);
 	void ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
 };

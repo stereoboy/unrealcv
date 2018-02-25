@@ -4,6 +4,7 @@
 #include "Serialization.h"
 #include "UE4ROSBridgeManager.h"
 #include "Serialization.h"
+#include "std_msgs/Float32.h"
 #include "std_msgs/Header.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "sensor_msgs/CameraInfo.h"
@@ -429,6 +430,35 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 	}
 }
 
+UGTCameraCaptureComponent::FROSFloat32SubScriber::FROSFloat32SubScriber(const FString& InTopic, UGTCameraCaptureComponent* Component) :
+	FROSBridgeSubscriber(InTopic, TEXT("std_msgs/Float32"))
+{
+	this->Component = Component;
+}
+
+UGTCameraCaptureComponent::FROSFloat32SubScriber::~FROSFloat32SubScriber()
+{
+};
+
+TSharedPtr<FROSBridgeMsg> UGTCameraCaptureComponent::FROSFloat32SubScriber::ParseMessage
+(TSharedPtr<FJsonObject> JsonObject) const
+{
+	TSharedPtr<std_msgs::Float32> Message = MakeShareable<std_msgs::Float32>(new std_msgs::Float32());
+	Message->FromJson(JsonObject);
+	return StaticCastSharedPtr<FROSBridgeMsg>(Message);
+}
+
+void UGTCameraCaptureComponent::FROSFloat32SubScriber::Callback(TSharedPtr<FROSBridgeMsg> InMsg)
+{
+	// downcast to subclass using StaticCastSharedPtr function
+	TSharedPtr<std_msgs::Float32> Message = StaticCastSharedPtr<std_msgs::Float32>(InMsg);
+
+	// do something with the message
+	float FOV = Message->GetData();
+	this->Component->SetTargetFieldOfView(FOV);
+	return;
+}
+
 UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(FName Name, APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes)
 {
 	UWorld* World = FUE4CVServer::Get().GetGameWorld();
@@ -529,10 +559,13 @@ UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(FName Name, APawn* 
 	return GTCapturer;
 }
 
-void UGTCameraCaptureComponent::SetUROSBridge(FString InROSTopic, FString InROSFrameId)
+void UGTCameraCaptureComponent::SetUROSBridge(FString InROSNamespace, FString InROSName, FString InROSFrameId)
 {
-	ROSTopic = InROSTopic;
+	ROSNamespace = InROSNamespace;
+	ROSName = InROSName;
 	ROSFrameId = InROSFrameId;
+
+	ROSTopic = InROSNamespace + TEXT("/") + ROSName;
 
 	// Set websocket server address to ws://127.0.0.1:9001
 	ROSHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_MASTER_PORT));
@@ -540,30 +573,37 @@ void UGTCameraCaptureComponent::SetUROSBridge(FString InROSTopic, FString InROSF
 	// Add topic subscribers and publishers
 	// Add service clients and servers
 	// **** Create publishers here ****
-	TfPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/loc"), TEXT("geometry_msgs/TransformStamped")));
-	ROSHandler->AddPublisher(TfPublisher);
+	//TSharedPtr<FROSBridgePublisher> TfPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/loc"), TEXT("geometry_msgs/TransformStamped")));
+	//ROSHandler->AddPublisher(TfPublisher);
 
 	for (auto Elem : CaptureComponents)
 	{
 		if (Elem.Key.Compare(TEXT("lit")) == 0)
 		{
-			ImageCameraInfoPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/rgb/camera_info"), TEXT("sensor_msgs/CameraInfo")));
+			TSharedPtr<FROSBridgePublisher> ImageCameraInfoPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/rgb/camera_info"), TEXT("sensor_msgs/CameraInfo")));
 			ROSHandler->AddPublisher(ImageCameraInfoPublisher);
-			ImagePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/rgb/image/compressed"), TEXT("sensor_msgs/CompressedImage")));
+			TSharedPtr<FROSBridgePublisher> ImagePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/rgb/image/compressed"), TEXT("sensor_msgs/CompressedImage")));
 			ROSHandler->AddPublisher(ImagePublisher);
 
 		}
 		else if (Elem.Key.Compare(TEXT("depth")) == 0)
 		{
-			DepthCameraInfoPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/depth/camera_info"), TEXT("sensor_msgs/CameraInfo")));
+			TSharedPtr<FROSBridgePublisher> DepthCameraInfoPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/depth/camera_info"), TEXT("sensor_msgs/CameraInfo")));
 			ROSHandler->AddPublisher(DepthCameraInfoPublisher);
-			DepthPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/depth/image"), TEXT("sensor_msgs/Image")));
+			TSharedPtr<FROSBridgePublisher> DepthPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/depth/image"), TEXT("sensor_msgs/Image")));
 			ROSHandler->AddPublisher(DepthPublisher);
 		}
 	}
 
+	// Add topic subscribers and publishers
+	TSharedPtr<FROSFloat32SubScriber> Subscriber = MakeShareable<FROSFloat32SubScriber>(new FROSFloat32SubScriber(ROSTopic + TEXT("/ctrl/fov"), this));
+	ROSHandler->AddSubscriber(Subscriber);
+
 	// Connect to ROSBridge Websocket server.
 	ROSHandler->Connect();
+
+	// Setup Initial Tranform for remote control in the future
+	InitialTransform = this->CameraComponent->GetRelativeTransform();
 }
 
 void UGTCameraCaptureComponent::BeginPlay()
@@ -669,9 +709,9 @@ void UGTCameraCaptureComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTi
 	//FQuat quat = current.GetRotation();
 
 	//geometry_msgs::Transform Transform(geometry_msgs::Vector3(loc.X, loc.Y, loc.Z), geometry_msgs::Quaternion(quat.X, quat.Y, quat.Z, quat.W));
-	geometry_msgs::Transform transform = FROSHelper::ConvertTransformUE4ToROS(Transform);
-	TSharedPtr<geometry_msgs::TransformStamped> Tf = MakeShareable(new geometry_msgs::TransformStamped(Header, ROSFrameId, transform));
-	ROSHandler->PublishMsg(ROSTopic + TEXT("/loc"), Tf);
+	//geometry_msgs::Transform transform = FROSHelper::ConvertTransformUE4ToROS(Transform);
+	//TSharedPtr<geometry_msgs::TransformStamped> Tf = MakeShareable(new geometry_msgs::TransformStamped(Header, ROSFrameId, transform));
+	//ROSHandler->PublishMsg(ROSTopic + TEXT("/loc"), Tf);
 
 	for (auto Elem : CaptureComponents)
 	{
