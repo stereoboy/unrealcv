@@ -8,6 +8,7 @@
 #include "sensor_msgs/JointState.h"
 #include "nav_msgs/Odometry.h"
 #include "ROSHelper.h"
+#include "Kismet/KismetMathLibrary.h"
 
 URemoteMovementComponent::FROSTwistSubScriber::FROSTwistSubScriber(const FString& InTopic,  URemoteMovementComponent* Component) :
 	FROSBridgeSubscriber(InTopic, TEXT("geometry_msgs/Twist"))
@@ -33,10 +34,26 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 	TSharedPtr<geometry_msgs::Twist> TwistMessage = StaticCastSharedPtr<geometry_msgs::Twist>(InMsg);
 
 	// do something with the message
-	FVector	 Linear = FROSHelper::ConvertVectorROSToUE4(TwistMessage->GetLinear());
+
+	// Convert Relative Translation to Global Translation
+	FVector  Linear = FROSHelper::ConvertVectorROSToUE4(TwistMessage->GetLinear());
 	FRotator Angular = FROSHelper::ConvertEulerAngleROSToUE4(TwistMessage->GetAngular());
-	FTransform Vel(Angular, Linear);
-	this->Component->SetVelocityCmd(Vel);
+
+	APawn* Pawn = FUE4CVServer::Get().GetPawn();
+	FRotator CtrlRot = Pawn->GetControlRotation();
+	FVector foward = UKismetMathLibrary::GetForwardVector(CtrlRot);
+	FVector right = UKismetMathLibrary::GetRightVector(CtrlRot);
+	FVector up = UKismetMathLibrary::GetUpVector(CtrlRot);
+
+	FVector GlobalLinear = foward * Linear.X + right * Linear.Y + up * Linear.Z;
+	FVector Direction;
+	float Norm;
+	float Factor = 1.0;
+	GlobalLinear.ToDirectionAndLength(Direction, Norm);
+
+	URemoteMovementComponent* Remote = FCaptureManager::Get().GetActor(0);
+	FTransform Velocity = FTransform(Angular, Direction*Norm*Factor);
+	this->Component->SetVelocityCmd(Velocity);
 	UE_LOG(LogUnrealCV, Log, TEXT("Message received! Content: %s"), *TwistMessage->ToString());
 
 	return;
