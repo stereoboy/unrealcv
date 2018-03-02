@@ -52,8 +52,8 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 	GlobalLinear.ToDirectionAndLength(Direction, Norm);
 
 	URemoteMovementComponent* Remote = FCaptureManager::Get().GetActor(0);
-	FTransform Velocity = FTransform(Angular, Direction*Norm*Factor);
-	this->Component->SetVelocityCmd(Velocity);
+	FTransform Vel = FTransform(Angular, Direction*Norm*Factor);
+	this->Component->SetVelocityCmd(Vel);
 	UE_LOG(LogUnrealCV, Log, TEXT("Message received! Content: %s"), *TwistMessage->ToString());
 
 	return;
@@ -245,11 +245,14 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	// publish clock
+	/*
 	float GameTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
 	uint64 GameSeconds = (int)GameTime;
 	uint64 GameUseconds = (GameTime - GameSeconds) * 1000000000;
 	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable
 	(new rosgraph_msgs::Clock(FROSTime(GameSeconds, GameUseconds)));
+	*/
+	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(FROSTime()));
 	Handler->PublishMsg("/clock", Clock);
 
 	ROSPublishOdom(DeltaTime);
@@ -311,7 +314,7 @@ void URemoteMovementComponent::BeginPlay()
 	UWorld* World = FUE4CVServer::Get().GetGameWorld();
 	bool result = World->Exec(World, TEXT("t.MaxFPS 60"));
 	*/
-	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 30"));
+	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 10"));
 
 	// Set websocket server address to ws://127.0.0.1:9001
 	Handler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_MASTER_PORT));

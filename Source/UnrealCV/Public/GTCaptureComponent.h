@@ -3,6 +3,7 @@
 #include "UE4CVServer.h"
 #include "ROSBRidgeHandler.h"
 #include "ROSBridgePublisher.h"
+#include "ROSTime.h"
 #include "GTCaptureComponent.generated.h"
 
 struct FGTCaptureTask
@@ -107,6 +108,9 @@ protected:
 	FString ROSFrameId;
 	TSharedPtr<FROSBridgeHandler> ROSHandler;
 
+	TMap<FString, TArray<uint8>> ROSFastMsgHeaderCache;
+	TSharedPtr<FROSBridgeHandler> ROSFastHandler;
+
 	FTransform InitialTransform;
 
 public:
@@ -126,6 +130,8 @@ public:
 	FTransform GetInitialTransform(void) { return InitialTransform; }
 
 protected:
+
+	void PackFastMsgHeader(TArray<uint8> &ByteData, FString Type, FROSTime Stamp, FString Name, FString FrameId, uint32 Height, uint32 Width);
 	void ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
 	void PublishImage(void);
 	void PublishDepth(void);
