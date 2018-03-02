@@ -569,6 +569,7 @@ void UGTCameraCaptureComponent::SetUROSBridge(FString InROSNamespace, FString In
 
 	// Set websocket server address to ws://127.0.0.1:9001
 	ROSHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_MASTER_PORT));
+	ROSFastHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), 9000));
 
 	// Add topic subscribers and publishers
 	// Add service clients and servers
@@ -582,16 +583,16 @@ void UGTCameraCaptureComponent::SetUROSBridge(FString InROSNamespace, FString In
 		{
 			TSharedPtr<FROSBridgePublisher> ImageCameraInfoPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/rgb/camera_info"), TEXT("sensor_msgs/CameraInfo")));
 			ROSHandler->AddPublisher(ImageCameraInfoPublisher);
-			TSharedPtr<FROSBridgePublisher> ImagePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/rgb/image/compressed"), TEXT("sensor_msgs/CompressedImage")));
-			ROSHandler->AddPublisher(ImagePublisher);
+			//TSharedPtr<FROSBridgePublisher> ImagePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/rgb/image/compressed"), TEXT("sensor_msgs/CompressedImage")));
+			//ROSHandler->AddPublisher(ImagePublisher);
 
 		}
 		else if (Elem.Key.Compare(TEXT("depth")) == 0)
 		{
 			TSharedPtr<FROSBridgePublisher> DepthCameraInfoPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/depth/camera_info"), TEXT("sensor_msgs/CameraInfo")));
 			ROSHandler->AddPublisher(DepthCameraInfoPublisher);
-			TSharedPtr<FROSBridgePublisher> DepthPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/depth/image"), TEXT("sensor_msgs/Image")));
-			ROSHandler->AddPublisher(DepthPublisher);
+			//TSharedPtr<FROSBridgePublisher> DepthPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(ROSTopic + TEXT("/depth/image"), TEXT("sensor_msgs/Image")));
+			//ROSHandler->AddPublisher(DepthPublisher);
 		}
 	}
 
@@ -601,6 +602,7 @@ void UGTCameraCaptureComponent::SetUROSBridge(FString InROSNamespace, FString In
 
 	// Connect to ROSBridge Websocket server.
 	ROSHandler->Connect();
+	ROSFastHandler->Connect();
 
 	// Setup Initial Tranform for remote control in the future
 	InitialTransform = this->CameraComponent->GetRelativeTransform();
@@ -614,9 +616,47 @@ void UGTCameraCaptureComponent::BeginPlay()
 void UGTCameraCaptureComponent::EndPlay(const EEndPlayReason::Type Reason)
 {
 	ROSHandler->Disconnect();
+	ROSFastHandler->Disconnect();
 	// Disconnect the ROSHandler before parent ends
 
 	Super::EndPlay(Reason);
+}
+
+void ConvertByte(TArray<uint8>& OutBinaryArray, FString Message)
+{
+	FTCHARToUTF8 Convert(*Message);
+	OutBinaryArray.Empty();
+	OutBinaryArray.Append((UTF8CHAR*)Convert.Get(), Convert.Length());
+}
+
+void PackFastMsgStrEntity(TArray<uint8>& ByteData, FString Elem, int32 Size)
+{
+	TArray<uint8> TypeData;
+	TArray<uint8> Temp;
+	TypeData.AddZeroed(Size);
+	ConvertByte(Temp, Elem);
+	FMemory::Memcpy(TypeData.GetData(), Temp.GetData(), FMath::Min(Size, Temp.Num()));
+	ByteData.Append(TypeData);
+}
+
+void UGTCameraCaptureComponent::PackFastMsgHeader(TArray<uint8> &ByteData, FString Type, FROSTime Stamp, FString Name, FString FrameId, uint32 Height, uint32 Width)
+{
+	if (!this->ROSFastMsgHeaderCache.Contains(Type))
+	{
+		TArray<uint8> TempData;
+		PackFastMsgStrEntity(TempData, Type, 32);
+		PackFastMsgStrEntity(TempData, Name, 32);
+		PackFastMsgStrEntity(TempData, FrameId, 32);
+
+		TempData.Append((uint8*)&Height, sizeof(uint32));
+		TempData.Append((uint8*)&Width, sizeof(uint32));
+
+		this->ROSFastMsgHeaderCache.Add(Type, TempData);
+	}
+	
+	ByteData.Append(ROSFastMsgHeaderCache[Type]);
+	ByteData.Append((uint8*)&Stamp.Secs, sizeof(uint32));
+	ByteData.Append((uint8*)&Stamp.NSecs, sizeof(uint32));
 }
 
 void UGTCameraCaptureComponent::PublishImage(void)
@@ -639,6 +679,16 @@ void UGTCameraCaptureComponent::PublishImage(void)
 
 		TSharedPtr<sensor_msgs::CameraInfo> CameraInfo = BuildROSCameraInfo(Header, Width, Height, FOV);
 		ROSHandler->PublishMsg(ROSTopic + TEXT("/rgb/camera_info"), CameraInfo);
+
+		UE_LOG(LogUnrealCV, Error, TEXT("RGB COLOR: R(%x) G(%x) B(%x) A(%x)"), ImageData[0].R, ImageData[0].G, ImageData[0].B, ImageData[0].A);
+
+		TArray<uint8> ByteData;
+		PackFastMsgHeader(ByteData, TEXT("RGB"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
+		ByteData.Append((uint8*)ImageData.GetData(), sizeof(FColor)*ImageData.Num());
+
+		ROSFastHandler->PublishFastMsg(ROSTopic + TEXT("/rgb/image"), ByteData);
+
+		UE_LOG(LogUnrealCV, Error, TEXT("RGB Num: %d, ByteData: %x %x %x %x"), ByteData.Num(), ByteData[0], ByteData[1], ByteData[2], ByteData[3]);
 
 		// publish images
 #if 0
@@ -688,14 +738,34 @@ void UGTCameraCaptureComponent::PublishDepth(void)
 	ROSDBG_TC_INIT();
 
 	ROSDBG_TC_BEGIN();
-	float fov = this->CameraComponent->FieldOfView;
+	float FOV = this->CameraComponent->FieldOfView;
 
 	FROSTime ROSTime = FROSTime();
 	TArray<FFloat16Color> FloatImageData;
 	int32 Height = 0, Width = 0;
 	this->CaptureFloat16Image("depth", FloatImageData, Width, Height);
 	ROSDBG_TC_END(LogUnrealCV, *ROSTopic, "Depth Capturing");
-	//ROSHandler->PublissMsg(ROSTopic + TEXT("/depth/image"), Image);
+
+	if (FloatImageData.Num() != 0)
+	{
+		// publish camera_info
+		std_msgs::Header Header(0, ROSTime, ROSFrameId);
+
+		TSharedPtr<sensor_msgs::CameraInfo> CameraInfo = BuildROSCameraInfo(Header, Width, Height, FOV);
+		ROSHandler->PublishMsg(ROSTopic + TEXT("/depth/camera_info"), CameraInfo);
+
+		//UE_LOG(LogUnrealCV, Error, TEXT("ByteData: %f %f %f %f"), FloatImageData[0], FloatImageData[1], FloatImageData[2], FloatImageData[3]);
+
+		TArray<uint8> ByteData;
+		PackFastMsgHeader(ByteData, TEXT("Depth"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
+		ByteData.Append((uint8*)FloatImageData.GetData(), sizeof(FFloat16Color)*FloatImageData.Num());
+
+		ROSFastHandler->PublishFastMsg(ROSTopic + TEXT("/depth/image"), ByteData);
+
+		UE_LOG(LogUnrealCV, Error, TEXT("sizeof(FFloat16Color): %d"), sizeof(FFloat16Color));
+		UE_LOG(LogUnrealCV, Error, TEXT("Depth Num: %d ByteData: %x %x %x %x"), ByteData.Num(), ByteData[0], ByteData[1], ByteData[2], ByteData[3]);
+		//ROSHandler->PublissMsg(ROSTopic + TEXT("/depth/image"), Image);
+	}
 }
 
 void UGTCameraCaptureComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
