@@ -10,6 +10,8 @@
 #include "ROSHelper.h"
 #include "Kismet/KismetMathLibrary.h"
 
+#define BASE_LINK_HEIGHT 0.08322
+
 URemoteMovementComponent::FROSTwistSubScriber::FROSTwistSubScriber(const FString& InTopic,  URemoteMovementComponent* Component) :
 	FROSBridgeSubscriber(InTopic, TEXT("geometry_msgs/Twist"))
 {
@@ -157,6 +159,11 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 
 	// publish tf
 	geometry_msgs::Transform transform = FROSHelper::ConvertTransformUE4ToROS(Transform);
+	transform.SetTranslation(
+		geometry_msgs::Vector3(	transform.GetTranslation().GetX(),
+								transform.GetTranslation().GetY(),
+								transform.GetTranslation().GetZ() - BASE_LINK_HEIGHT)
+	);
 
 	TArray<geometry_msgs::TransformStamped> transforms = { geometry_msgs::TransformStamped(Header, "base_footprint", transform) };
 	TSharedPtr<tf2_msgs::TFMessage> odomtrans = MakeShareable(new tf2_msgs::TFMessage(transforms));
