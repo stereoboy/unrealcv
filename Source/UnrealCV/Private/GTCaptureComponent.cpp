@@ -569,7 +569,7 @@ void UGTCameraCaptureComponent::SetUROSBridge(FString InROSNamespace, FString In
 
 	// Set websocket server address to ws://127.0.0.1:9001
 	ROSHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_MASTER_PORT));
-	ROSFastHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), 9000));
+	ROSFastHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_FAST_MASTER_PORT));
 
 	// Add topic subscribers and publishers
 	// Add service clients and servers
@@ -680,7 +680,7 @@ void UGTCameraCaptureComponent::PublishImage(void)
 		TSharedPtr<sensor_msgs::CameraInfo> CameraInfo = BuildROSCameraInfo(Header, Width, Height, FOV);
 		ROSHandler->PublishMsg(ROSTopic + TEXT("/rgb/camera_info"), CameraInfo);
 
-		UE_LOG(LogUnrealCV, Error, TEXT("RGB COLOR: R(%x) G(%x) B(%x) A(%x)"), ImageData[0].R, ImageData[0].G, ImageData[0].B, ImageData[0].A);
+    //UE_LOG(LogUnrealCV, Error, TEXT("RGB COLOR: R(%x) G(%x) B(%x) A(%x)"), ImageData[0].R, ImageData[0].G, ImageData[0].B, ImageData[0].A);
 
 		TArray<uint8> ByteData;
 		PackFastMsgHeader(ByteData, TEXT("RGB"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
@@ -688,7 +688,7 @@ void UGTCameraCaptureComponent::PublishImage(void)
 
 		ROSFastHandler->PublishFastMsg(ROSTopic + TEXT("/rgb/image"), ByteData);
 
-		UE_LOG(LogUnrealCV, Error, TEXT("RGB Num: %d, ByteData: %x %x %x %x"), ByteData.Num(), ByteData[0], ByteData[1], ByteData[2], ByteData[3]);
+		//UE_LOG(LogUnrealCV, Error, TEXT("RGB Num: %d, ByteData: %x %x %x %x"), ByteData.Num(), ByteData[0], ByteData[1], ByteData[2], ByteData[3]);
 
 		// publish images
 #if 0
@@ -762,8 +762,8 @@ void UGTCameraCaptureComponent::PublishDepth(void)
 
 		ROSFastHandler->PublishFastMsg(ROSTopic + TEXT("/depth/image"), ByteData);
 
-		UE_LOG(LogUnrealCV, Error, TEXT("sizeof(FFloat16Color): %d"), sizeof(FFloat16Color));
-		UE_LOG(LogUnrealCV, Error, TEXT("Depth Num: %d ByteData: %x %x %x %x"), ByteData.Num(), ByteData[0], ByteData[1], ByteData[2], ByteData[3]);
+		//UE_LOG(LogUnrealCV, Error, TEXT("sizeof(FFloat16Color): %d"), sizeof(FFloat16Color));
+		//UE_LOG(LogUnrealCV, Error, TEXT("Depth Num: %d ByteData: %x %x %x %x"), ByteData.Num(), ByteData[0], ByteData[1], ByteData[2], ByteData[3]);
 		//ROSHandler->PublissMsg(ROSTopic + TEXT("/depth/image"), Image);
 	}
 }

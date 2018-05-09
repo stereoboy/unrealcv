@@ -1,6 +1,6 @@
 #pragma once
 #include "Object.h"
-#include "ROSBRidgeHandler.h"
+#include "ROSBridgeHandler.h"
 #include "ROSBridgePublisher.h"
 #include "ROSBridgeSubscriber.h"
 #include "geometry_msgs/Twist.h"

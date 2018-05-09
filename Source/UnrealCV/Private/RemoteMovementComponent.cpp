@@ -34,6 +34,7 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 {
 	// downcast to subclass using StaticCastSharedPtr function
 	TSharedPtr<geometry_msgs::Twist> TwistMessage = StaticCastSharedPtr<geometry_msgs::Twist>(InMsg);
+	UE_LOG(LogUnrealCV, Log, TEXT("Message received! Content: %s"), *TwistMessage->ToString());
 
 	// do something with the message
 
@@ -55,9 +56,10 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 
 	URemoteMovementComponent* Remote = FCaptureManager::Get().GetActor(0);
 	FTransform Vel = FTransform(Angular, Direction*Norm*Factor);
+	//FTransform Vel = FTransform(Angular, Linear);
 	this->Component->SetVelocityCmd(Vel);
-	UE_LOG(LogUnrealCV, Log, TEXT("Message received! Content: %s"), *TwistMessage->ToString());
 
+	UE_LOG(LogUnrealCV, Log, TEXT("Transform: (%f %f %f), (%f %f %f)"), Linear.X, Linear.Y, Linear.Z, Angular.Roll, Angular.Pitch, Angular.Yaw);
 	return;
 }
 
@@ -321,6 +323,11 @@ void URemoteMovementComponent::BeginPlay()
 	UWorld* World = FUE4CVServer::Get().GetGameWorld();
 	bool result = World->Exec(World, TEXT("t.MaxFPS 60"));
 	*/
+	/*
+	 * MaxFPS Setup is very important on LINUX. If it setup too high value for fast rendering, data order can be mixed up.
+	 *
+	 */
+	GEngine->Exec(GetWorld(), TEXT("stat FPS"));
 	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 10"));
 
 	// Set websocket server address to ws://127.0.0.1:9001
