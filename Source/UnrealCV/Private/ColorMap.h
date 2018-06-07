@@ -1,3 +1,5 @@
+#include "Runtime/Launch/Resources/Version.h"
+
 
 /** Utility function to generate color map */
 int32 GetChannelValue(uint32 Index)

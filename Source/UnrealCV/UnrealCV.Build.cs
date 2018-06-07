@@ -7,12 +7,12 @@ public class UnrealCV: ModuleRules
     public UnrealCV(ReadOnlyTargetRules Target) : base(Target)
     {
 		// This trick is from https://answers.unrealengine.com/questions/258689/how-to-include-private-header-files-of-other-modul.html
-		string EnginePath = Path.GetFullPath(BuildConfiguration.RelativeEnginePath);
+		//string EnginePath = Path.GetFullPath(BuildConfiguration.RelativeEnginePath);
 
 		PublicIncludePaths.AddRange(
 			new string[]
 			{
-				EnginePath + "Source/Runtime/Launch/Resources",
+				"Source/Runtime/Launch/Resources",
 				// To get Unreal Engine minor version
 			}
 		);
@@ -48,7 +48,7 @@ public class UnrealCV: ModuleRules
 
         // PrivateDependency only available in Private folder
         // Reference: https://answers.unrealengine.com/questions/23384/what-is-the-difference-between-publicdependencymod.html
-        if (UEBuildConfiguration.bBuildEditor == true)
+        if (Target.bBuildEditor == true)
 		{
 			PrivateDependencyModuleNames.AddRange(
 				new string[]

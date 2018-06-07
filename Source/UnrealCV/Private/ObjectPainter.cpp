@@ -3,7 +3,7 @@
 #include "StaticMeshResources.h"
 #include "UE4CVServer.h"
 #include "SceneViewport.h"
-#include "Version.h"
+//#include "Version.h"
 #include "ColorMap.h"
 
 FObjectPainter& FObjectPainter::Get()
