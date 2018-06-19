@@ -284,8 +284,8 @@ void URemoteMovementComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 	{
 		if (this->MoveAnimCountFromRemote > 0)
 		{
-			FVector DeltaXYZ = this->VelocityCmd.GetLocation()*DeltaTime;
-			FRotator Rot = this->VelocityCmd.Rotator();
+			FVector DeltaXYZ = this->VelocityCmd.GetLocation()*DeltaTime*UE4ROS_LINEAR_MOVEMENT_SCALE_FACTOR;
+			FRotator Rot = this->VelocityCmd.Rotator()*UE4ROS_ANGULAR_MOVEMENT_SCALE_FACTOR;
 
 			OwningPawn->AddMovementInput(DeltaXYZ);
 			OwningPawn->AddControllerPitchInput(Rot.Pitch*DeltaTime);

@@ -11,6 +11,9 @@
 reference: https://docs.unrealengine.com/latest/INT/Programming/Tutorials/Components/4/index.html
 */
 
+#define UE4ROS_LINEAR_MOVEMENT_SCALE_FACTOR 0.01
+#define UE4ROS_ANGULAR_MOVEMENT_SCALE_FACTOR 1.0
+
 UCLASS()
 class UNREALCV_API URemoteMovementComponent : public UMovementComponent
 {
