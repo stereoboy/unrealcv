@@ -119,6 +119,17 @@ void URemoteMovementComponent::FROSJointStateSubScriber::Callback(TSharedPtr<FRO
 			UE_LOG(LogUnrealCV, Log, TEXT("Pitch: %f, Yaw: %f, Z: %f"), Pitch, Yaw, Z);
 		}
 	}
+	for (auto& Elem : this->Component->JointComponentMap)
+	{
+		for (int i = 0; i < Names.Num(); i++)
+		{
+			FString Name = Names[i];
+			double Position = Positions[i];
+			if (Name.Compare(Elem.Key) == 0) {
+				Elem.Value->SetRelativeRotation(FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, 0.0, Position)));
+			}
+		}
+	}
 }
 
 URemoteMovementComponent::URemoteMovementComponent()
@@ -144,6 +155,30 @@ URemoteMovementComponent* URemoteMovementComponent::Create(FName Name, APawn* Pa
 void URemoteMovementComponent::Init(void)
 {
 	this->bIsTicking = true;
+
+	// Build Joint Info List
+	const FRegexPattern RegexPattern(TEXT("Robot_Arm_Joint_[0-9]+"));
+
+	APawn* OwningPawn = Cast<APawn>(this->GetOwner());
+
+	UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
+	TArray<UActorComponent*> joints = (OwningPawn->GetComponentsByClass(UStaticMeshComponent::StaticClass()));
+	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
+	for (int32 idx = 0; idx < joints.Num(); ++idx)
+	{
+		UStaticMeshComponent* joint = Cast<UStaticMeshComponent>(joints[idx]);
+		FRegexMatcher Matcher(RegexPattern, joint->GetName());
+		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullName():						%s"), idx, *joint->GetFullName());
+		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetName():								%s"), idx, *joint->GetName());
+		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullGroupName(false):	%s"), idx, *joint->GetFullGroupName(false));
+		if (Matcher.FindNext())
+		{
+			FString name = joint->GetName().ToLower();
+			JointComponentMap.Add(name, joint);
+			UE_LOG(LogUnrealCV, Log, TEXT("-> joint(%s) added"), *name);
+		}
+	}
+	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 }
 
 void URemoteMovementComponent::SetVelocityCmd(const FTransform& InVelocityCmd)
@@ -175,7 +210,7 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 	geometry_msgs::Vector3 vec = transform.GetTranslation();
 	geometry_msgs::Quaternion quat = transform.GetRotation();
 	geometry_msgs::Pose pose(geometry_msgs::Point(vec.GetX(), vec.GetY(), vec.GetZ()), quat);
-	TArray<double> posecov = {
+	const TArray<double> posecov = {
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -190,7 +225,7 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 		(Transform.Rotator().Yaw - PrevAngular.Yaw) / DeltaTime,
 		(Transform.Rotator().Roll - PrevAngular.Roll) / DeltaTime);
 	geometry_msgs::Vector3 angular = FROSHelper::ConvertEulerAngleUE4ToROS(AngularVel);
-	TArray<double> twistcov = {
+	const TArray<double> twistcov = {
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -245,6 +280,14 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 				Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(Pitch, 0.0, 0.0)).GetY());
 			}
 		}
+	}
+
+	for (auto& Elem : JointComponentMap)
+	{
+		float Yaw = 0.0;
+		Names.Add(Elem.Key);
+		Yaw = Elem.Value->GetRelativeTransform().Rotator().Yaw;
+		Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, Yaw, 0.0)).GetZ());
 	}
 
 	TSharedPtr<sensor_msgs::JointState> jointstates = MakeShareable(new sensor_msgs::JointState(Header, Names, Positions, Velocities, Efforts));
@@ -327,6 +370,7 @@ void URemoteMovementComponent::BeginPlay()
 	 * MaxFPS Setup is very important on LINUX. If it setup too high value for fast rendering, data order can be mixed up.
 	 *
 	 */
+	UE_LOG(LogUnrealCV, Warning, TEXT("URemoteMovementComponent::BeginPlay()"));
 	GEngine->Exec(GetWorld(), TEXT("stat FPS"));
 	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 10"));
 

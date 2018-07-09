@@ -56,6 +56,7 @@ protected:
 	TSharedPtr<FROSBridgeHandler> Handler;
 
 	TArray<UGTCameraCaptureComponent*> CaptureComponentList;
+	TMap<FString, UStaticMeshComponent*> JointComponentMap;
 
 public:
 	static URemoteMovementComponent* Create(FName Name, APawn* Pawn);
