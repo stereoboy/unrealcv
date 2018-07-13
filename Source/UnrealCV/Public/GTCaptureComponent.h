@@ -131,8 +131,9 @@ public:
 
 protected:
 
-	void PackFastMsgHeader(TArray<uint8> &ByteData, FString Type, FROSTime Stamp, FString Name, FString FrameId, uint32 Height, uint32 Width);
+	void PackFastMsgHeader(TArray<uint8> &ByteData, FString Type, FString Topic, FString MsgType, FROSTime Stamp, FString Name, FString FrameId, uint32 Height, uint32 Width);
 	void ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
 	void PublishImage(void);
 	void PublishDepth(void);
+	void PublishLabel(void);
 };

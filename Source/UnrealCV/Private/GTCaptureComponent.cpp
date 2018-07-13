@@ -514,8 +514,18 @@ UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(FName Name, APawn* 
 			CaptureComponent->TextureTarget->TargetGamma = 1;
 			if (Mode == "object_mask") // For object mask
 			{
+#if 0
 				// FViewMode::Lit(CaptureComponent->ShowFlags);
 				FViewMode::VertexColor(CaptureComponent->ShowFlags);
+#else
+				check(Material);
+				// GEngine->GetDisplayGamma(), the default gamma is 2.2
+				// CaptureComponent->TextureTarget->TargetGamma = 2.2;
+				FViewMode::PostProcess(CaptureComponent->ShowFlags);
+
+				CaptureComponent->PostProcessSettings.AddBlendable(Material, 1);
+				// Instead of switching post-process materials, we create several SceneCaptureComponent, so that we can capture different GT within the same frame.
+#endif
 			}
 			else if (Mode == "wireframe") // For object mask
 			{
@@ -639,11 +649,13 @@ void PackFastMsgStrEntity(TArray<uint8>& ByteData, FString Elem, int32 Size)
 	ByteData.Append(TypeData);
 }
 
-void UGTCameraCaptureComponent::PackFastMsgHeader(TArray<uint8> &ByteData, FString Type, FROSTime Stamp, FString Name, FString FrameId, uint32 Height, uint32 Width)
+void UGTCameraCaptureComponent::PackFastMsgHeader(TArray<uint8> &ByteData, FString Topic, FString MsgType, FString Type, FROSTime Stamp, FString Name, FString FrameId, uint32 Height, uint32 Width)
 {
 	if (!this->ROSFastMsgHeaderCache.Contains(Type))
 	{
 		TArray<uint8> TempData;
+		PackFastMsgStrEntity(TempData, Topic, 64);
+		PackFastMsgStrEntity(TempData, MsgType, 32);
 		PackFastMsgStrEntity(TempData, Type, 32);
 		PackFastMsgStrEntity(TempData, Name, 32);
 		PackFastMsgStrEntity(TempData, FrameId, 32);
@@ -683,7 +695,7 @@ void UGTCameraCaptureComponent::PublishImage(void)
     //UE_LOG(LogUnrealCV, Error, TEXT("RGB COLOR: R(%x) G(%x) B(%x) A(%x)"), ImageData[0].R, ImageData[0].G, ImageData[0].B, ImageData[0].A);
 
 		TArray<uint8> ByteData;
-		PackFastMsgHeader(ByteData, TEXT("RGB"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
+		PackFastMsgHeader(ByteData, ROSTopic + TEXT("/rgb/image"), TEXT("Image"), TEXT("RGB"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
 		ByteData.Append((uint8*)ImageData.GetData(), sizeof(FColor)*ImageData.Num());
 
 		ROSFastHandler->PublishFastMsg(ROSTopic + TEXT("/rgb/image"), ByteData);
@@ -757,7 +769,7 @@ void UGTCameraCaptureComponent::PublishDepth(void)
 		//UE_LOG(LogUnrealCV, Error, TEXT("ByteData: %f %f %f %f"), FloatImageData[0], FloatImageData[1], FloatImageData[2], FloatImageData[3]);
 
 		TArray<uint8> ByteData;
-		PackFastMsgHeader(ByteData, TEXT("Depth"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
+		PackFastMsgHeader(ByteData, ROSTopic + TEXT("/depth/image"), TEXT("Image"), TEXT("Depth"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
 		ByteData.Append((uint8*)FloatImageData.GetData(), sizeof(FFloat16Color)*FloatImageData.Num());
 
 		ROSFastHandler->PublishFastMsg(ROSTopic + TEXT("/depth/image"), ByteData);
@@ -765,6 +777,33 @@ void UGTCameraCaptureComponent::PublishDepth(void)
 		//UE_LOG(LogUnrealCV, Error, TEXT("sizeof(FFloat16Color): %d"), sizeof(FFloat16Color));
 		//UE_LOG(LogUnrealCV, Error, TEXT("Depth Num: %d ByteData: %x %x %x %x"), ByteData.Num(), ByteData[0], ByteData[1], ByteData[2], ByteData[3]);
 		//ROSHandler->PublissMsg(ROSTopic + TEXT("/depth/image"), Image);
+	}
+}
+
+void UGTCameraCaptureComponent::PublishLabel(void)
+{
+	ROSDBG_TC_INIT();
+
+	ROSDBG_TC_BEGIN();
+	double FOV = this->CameraComponent->FieldOfView;
+
+	FROSTime ROSTime = FROSTime();
+	TArray<FColor> ImageData;
+	int32 Height = 0, Width = 0;
+	this->CaptureImage("object_mask", ImageData, Width, Height);
+	ROSDBG_TC_END(LogUnrealCV, *ROSTopic, " Label Capturing");
+
+	if (ImageData.Num() != 0)
+	{
+		// publish camera_info
+		std_msgs::Header Header(0, ROSTime, ROSFrameId);
+
+		TArray<uint8> ByteData;
+		PackFastMsgHeader(ByteData, ROSTopic + TEXT("/label/image"), TEXT("Image"), TEXT("Label"), ROSTime, this->ROSName, this->ROSFrameId, Height, Width);
+		ByteData.Append((uint8*)ImageData.GetData(), sizeof(FColor)*ImageData.Num());
+
+		ROSFastHandler->PublishFastMsg(ROSTopic + TEXT("/label/image"), ByteData);
+
 	}
 }
 
@@ -794,6 +833,10 @@ void UGTCameraCaptureComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTi
 		else if (Elem.Key.Compare(TEXT("depth")) == 0)
 		{
 			PublishDepth();
+		}
+		else if (Elem.Key.Compare(TEXT("object_mask")) == 0)
+		{
+			PublishLabel();
 		}
 	}
 

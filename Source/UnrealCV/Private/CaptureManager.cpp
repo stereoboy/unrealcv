@@ -46,7 +46,7 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 		UCameraComponent* camera = Cast<UCameraComponent>(cameras[idx]);
 		if (camera->GetName().Compare(TEXT("Camera")) == 0)
 		{
-			TArray<FString> SupportedModes = {TEXT("lit")};
+			TArray<FString> SupportedModes = {TEXT("lit"), TEXT("object_mask")};
 			UGTCameraCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
 			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("main_cam"), TEXT("main_img_link"));
 			CaptureComponentList.Add(camCom);
