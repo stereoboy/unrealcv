@@ -142,13 +142,48 @@ bool FUE4CVServer::InitWorld()
 		APlayerController* PlayerController = World->GetFirstPlayerController();
 		check(PlayerController);
 
-		FObjectPainter::Get().Reset(GetPawn()->GetLevel());
+		//FObjectPainter::Get().Reset(GetPawn()->GetLevel());
 		FCaptureManager::Get().AttachGTCaptureComponentToCamera(GetPawn()); // TODO: Make this configurable in the editor
 
 		FEngineShowFlags ShowFlags = World->GetGameViewport()->EngineShowFlags;
 		FPlayerViewMode::Get().SaveGameDefault(ShowFlags);
 
 		CurrentWorld = World;
+
+		// Put color for segmentation
+		uint32 ObjectIndex = 1; // 0 for Non-SkeletalMeshComponent
+		for (AActor* Actor : GetPawn()->GetLevel()->Actors)
+		{
+			if (Actor)
+			{
+				TArray<UMeshComponent*> PaintableComponents;
+				Actor->GetComponents<UMeshComponent>(PaintableComponents);
+				if (PaintableComponents.Num() == 0)
+				{
+					continue;
+				}
+				for (auto MeshComponent : PaintableComponents)
+				{
+					if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(MeshComponent))
+					{
+						UE_LOG(LogUnrealCV, Log, TEXT("Paint StaticMeshComponent: %s"), *Actor->GetHumanReadableName());
+
+						StaticMeshComponent->SetRenderCustomDepth(true);
+						StaticMeshComponent->SetCustomDepthStencilValue(0);
+					}
+					if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
+					{
+						UE_LOG(LogUnrealCV, Log, TEXT("Paint SkeletalMeshComponent: %s (%d)"), *Actor->GetHumanReadableName(), ObjectIndex);
+
+						SkeletalMeshComponent->SetRenderCustomDepth(true);
+						SkeletalMeshComponent->SetCustomDepthStencilValue(ObjectIndex);
+						ObjectIndex = (ObjectIndex + 1)%256;
+					}
+				}
+			}
+		}
+		// end
+
 	}
 	return true;
 }

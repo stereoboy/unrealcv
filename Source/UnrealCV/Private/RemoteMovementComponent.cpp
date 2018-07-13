@@ -371,6 +371,9 @@ void URemoteMovementComponent::BeginPlay()
 	 *
 	 */
 	UE_LOG(LogUnrealCV, Warning, TEXT("URemoteMovementComponent::BeginPlay()"));
+	// setup for CustomDepthStencil buffer for label images
+	GEngine->Exec(GetWorld(), TEXT("r.CustomDepth 3"));
+	// FPS limitation for publishing stability
 	GEngine->Exec(GetWorld(), TEXT("stat FPS"));
 	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 10"));
 
