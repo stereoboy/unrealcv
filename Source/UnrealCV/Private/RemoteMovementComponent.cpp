@@ -7,6 +7,8 @@
 #include "tf2_msgs/TFMessage.h"
 #include "sensor_msgs/JointState.h"
 #include "nav_msgs/Odometry.h"
+#include "std_msgs/Header.h"
+#include "sensor_msgs/Image.h"
 #include "ROSHelper.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -137,6 +139,22 @@ URemoteMovementComponent::URemoteMovementComponent()
 {
 	this->PrevLinear = FVector(0.0, 0.0, 0.0);
 	this->PrevAngular = FRotator(0.0, 0.0, 0.0);
+
+	//UTexture2D* Texture = Cast<UTexture2D>(LoadObjFromPath(UTexture2D::StaticClass(), NULL, *TEXT("/UnrealCV/seg_color_pallet")));
+	// FObjectFinder should be called in constructors
+	ConstructorHelpers::FObjectFinder<UTexture2D> TextureObject(TEXT("/UnrealCV/seg_color_pallet"));
+	UTexture2D* Texture = TextureObject.Object;
+	Texture->UpdateResource();
+	FTexture2DMipMap* MM = &Texture->PlatformData->Mips[0];
+	LabelColorTableWidth = MM->SizeX;
+	LabelColorTableHeight = MM->SizeY;
+	LabelColorTable.AddZeroed(4*LabelColorTableWidth*LabelColorTableHeight);
+
+	FByteBulkData* RawImageData = &MM->BulkData;
+	FColor* FormatedImageData = static_cast<FColor*>(RawImageData->Lock(LOCK_READ_ONLY));
+	FMemory::Memcpy(LabelColorTable.GetData(), FormatedImageData, LabelColorTable.Num());
+	RawImageData->Unlock();
+	LabelColorTablePubCount = 0;
 }
 
 URemoteMovementComponent* URemoteMovementComponent::Create(FName Name, APawn* Pawn)
@@ -310,6 +328,21 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 	ROSPublishOdom(DeltaTime);
 
 	ROSPublishJointState(DeltaTime);
+
+	if (LabelColorTablePubCount < 10)
+	{
+		FString Topic = TEXT("/ue4/segmentation_color_table");
+		FROSTime ROSTime = FROSTime();
+		std_msgs::Header Header(LabelColorTablePubCount, ROSTime, TEXT(""));
+		TSharedPtr<sensor_msgs::Image> ColorTableMsg =
+			MakeShareable(new sensor_msgs::Image(
+				Header, LabelColorTableHeight, LabelColorTableWidth, TEXT("rgba8")/*4Channel*/, true,
+				LabelColorTableWidth * 4, LabelColorTable)
+			);
+
+		Handler->PublishMsg(Topic, ColorTableMsg);
+		LabelColorTablePubCount++;
+	}
 }
 
 void URemoteMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -400,8 +433,25 @@ void URemoteMovementComponent::BeginPlay()
 	TSharedPtr<FROSJointStateSubScriber> JointStateSubscriber = MakeShareable<FROSJointStateSubScriber>(new FROSJointStateSubScriber(TEXT("/ue4/robot/ctrl/joint_states"), this));
 	Handler->AddSubscriber(JointStateSubscriber);
 
+	FString Topic = TEXT("/ue4/segmentation_color_table");
+	TSharedPtr<FROSBridgePublisher> LabelColorTablePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(Topic, TEXT("sensor_msgs/Image")));
+	Handler->AddPublisher(LabelColorTablePublisher);
+
 	// Connect to ROSBridge Websocket server.
 	Handler->Connect();
+
+#if 0
+	FROSTime ROSTime = FROSTime();
+
+	std_msgs::Header Header(0, ROSTime, TEXT(""));
+	TSharedPtr<sensor_msgs::Image> ColorTableMsg =
+		MakeShareable(new sensor_msgs::Image(
+			Header, LabelColorTableHeight, LabelColorTableWidth, TEXT("rgba8")/*4Channel*/, true,
+			LabelColorTableWidth * 4, LabelColorTable)
+		);
+
+	Handler->PublishMsg(Topic, ColorTableMsg);
+#endif
 }
 
 void URemoteMovementComponent::EndPlay(const EEndPlayReason::Type Reason)

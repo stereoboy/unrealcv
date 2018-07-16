@@ -53,6 +53,11 @@ protected:
 	FVector	PrevLinear;
 	FRotator PrevAngular;
 
+	TArray<uint8> LabelColorTable;
+	int LabelColorTableWidth;
+	int LabelColorTableHeight;
+	int LabelColorTablePubCount;
+
 	TSharedPtr<FROSBridgeHandler> Handler;
 
 	TArray<UGTCameraCaptureComponent*> CaptureComponentList;
