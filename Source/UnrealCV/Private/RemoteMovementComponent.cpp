@@ -9,6 +9,7 @@
 #include "nav_msgs/Odometry.h"
 #include "std_msgs/Header.h"
 #include "sensor_msgs/Image.h"
+#include "visualization_msgs/MarkerArray.h"
 #include "ROSHelper.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -155,6 +156,8 @@ URemoteMovementComponent::URemoteMovementComponent()
 	FMemory::Memcpy(LabelColorTable.GetData(), FormatedImageData, LabelColorTable.Num());
 	RawImageData->Unlock();
 	LabelColorTablePubCount = 0;
+
+	bSkeletalActorMapInitialized = false;
 }
 
 URemoteMovementComponent* URemoteMovementComponent::Create(FName Name, APawn* Pawn)
@@ -253,7 +256,7 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 	};
 	geometry_msgs::TwistWithCovariance	twistwithcov(geometry_msgs::Twist(linear, angular), twistcov);
 
-	TSharedPtr<nav_msgs::Odometry> odometry = MakeShareable(new nav_msgs::Odometry(Header, "base_footprint", posewithcov, twistwithcov));
+	TSharedPtr<nav_msgs::Odometry> odometry = MakeShareable(new nav_msgs::Odometry(Header, TEXT("base_footprint"), posewithcov, twistwithcov));
 	Handler->PublishMsg("/ue4/odom", odometry);
 
 	Handler->Process();
@@ -343,6 +346,151 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 		Handler->PublishMsg(Topic, ColorTableMsg);
 		LabelColorTablePubCount++;
 	}
+
+	ROSPublishSkeletalState(DeltaTime);
+}
+void URemoteMovementComponent::ROSBuildSkeletalState(USkeletalMeshComponent* SkeletalMeshComponent, TArray<geometry_msgs::Point> &Points, TArray<std_msgs::ColorRGBA> &Colors)
+{
+	FTransform Transform = SkeletalMeshComponent->GetComponentTransform();
+	FVector Scale = Transform.GetScale3D();
+	UE_LOG(LogUnrealCV, Log, TEXT("Scale %f %f %f"), Scale.X, Scale.Y, Scale.Z);
+	TArray<FName> Labels = {TEXT("LABEL_HEAD"), TEXT("LABEL_UARM_L"), TEXT("LABEL_UARM_R"), TEXT("LABEL_LARM_L"), TEXT("LABEL_LARM_R"), TEXT("LABEL_HAND_L"), TEXT("LABEL_HAND_R"), TEXT("LABEL_ULEG_L"), TEXT("LABEL_ULEG_R"), TEXT("LABEL_LLEG_L"), TEXT("LABEL_LLEG_R"), TEXT("LABEL_FOOT_L"), TEXT("LABEL_FOOT_R")};
+	for (auto& Label: Labels)
+	{
+		const USkeletalMeshSocket* Socket = SkeletalMeshComponent->GetSocketByName(Label);
+		if (Socket)
+		{
+			//vec = FROSHelper::ConvertVectorUE4ToROS(Socket->GetSocketLocation(SkeletalMeshComponent));
+			geometry_msgs::Vector3 vec = FROSHelper::ConvertVectorUE4ToROS(SkeletalMeshComponent->GetBoneLocation(Socket->BoneName, EBoneSpaces::ComponentSpace));
+			Points.Add(geometry_msgs::Point(Scale.X*vec.GetX(), Scale.Y*vec.GetY(), Scale.Z*vec.GetZ()));
+			//Colors.Add(std_msgs::ColorRGBA(1.0, 1.0, 0.0, 1.0));
+		}
+	}
+/*
+	TArray<FName> Labels_TypeB = {TEXT("head"), TEXT("upperarm_l"), TEXT("upperarm_r"), TEXT("lowerarm_l"), TEXT("lowerarm_r"), TEXT("hand_l"), TEXT("hand_r"), TEXT("upperleg_l"), TEXT("upperleg_r"), TEXT("lowerleg_l"), TEXT("lowerleg_r")};
+	geometry_msgs::Vector3 vec;
+	for (auto& Label: Labels_TypeB)
+	{
+		vec = FROSHelper::ConvertVectorUE4ToROS(SkeletalMeshComponent->GetBoneLocation(Label, EBoneSpaces::ComponentSpace));
+		if (vec.Size() > 0)
+		{
+			Points.Add(geometry_msgs::Point(Scale.X*vec.GetX(), Scale.Y*vec.GetY(), Scale.Z*vec.GetZ()));
+			//Colors.Add(std_msgs::ColorRGBA(1.0, 1.0, 0.0, 1.0));
+		}
+	}
+*/
+
+	TArray<FName> Labels_TypeC = {TEXT("Head"), TEXT("LeftArm"), TEXT("RightArm"), TEXT("LeftForeArm"), TEXT("RightForeArm"), TEXT("LeftHand"), TEXT("RightHand"), TEXT("LeftUpLeg"), TEXT("RightUpLeg"), TEXT("LeftLeg"), TEXT("RightLeg"), TEXT("LeftFoot"), TEXT("RightFoot")};
+	for (auto& Label: Labels_TypeC)
+	{
+		FVector Vec = SkeletalMeshComponent->GetBoneLocation(Label, EBoneSpaces::ComponentSpace);
+		if (Vec.Size() > 0)
+		{
+			geometry_msgs::Vector3 vec = FROSHelper::ConvertVectorUE4ToROS(Vec);
+			Points.Add(geometry_msgs::Point(Scale.X*vec.GetX(), Scale.Y*vec.GetY(), Scale.Z*vec.GetZ()));
+			//Colors.Add(std_msgs::ColorRGBA(1.0, 1.0, 0.0, 1.0));
+		}
+	}
+
+//	TSharedPtr<visualization_msgs::Marker> MarkerMsg = MakeShareable(new visualization_msgs::Marker(
+//				Header, Name,
+//				visualization_msgs::Marker::ARROW, visualization_msgs::Marker::ADD,
+//				pose, scale,
+//				color, 0,
+//				true,
+//        Points, Colors, TEXT("TEST"), TEXT(""), false
+//				));
+//	Handler->PublishMsg("/ue4/person", MarkerMsg);
+}
+
+void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
+{
+	if (!bSkeletalActorMapInitialized)
+	{
+		UE_LOG(LogUnrealCV, Log, TEXT("Initialize SkeletalActorMap"));
+		for (AActor* Actor : FUE4CVServer::Get().GetPawn()->GetLevel()->Actors)
+		{
+			if (Actor && Actor->GetHumanReadableName().Compare(TEXT("Player")))
+			{
+				TArray<UMeshComponent*> PaintableComponents;
+				Actor->GetComponents<UMeshComponent>(PaintableComponents);
+				if (PaintableComponents.Num() == 0)
+				{
+					continue;
+				}
+				for (auto MeshComponent : PaintableComponents)
+				{
+					if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
+					{
+						// TODO
+						SkeletalActorMap.Add(Actor->GetHumanReadableName(), Actor);
+					}
+				}
+			}
+		}
+		bSkeletalActorMapInitialized = true;
+	}
+
+	TArray<visualization_msgs::Marker> MarkerArray;
+	for (auto Elem : SkeletalActorMap)
+	{
+		// TODO
+		FString Name = Elem.Key;
+		AActor *Actor = Elem.Value;
+		UE_LOG(LogUnrealCV, Log, TEXT("Publish Marker for %s"), *Name);
+		FROSTime ROSTime = FROSTime();
+		std_msgs::Header Header(0, ROSTime, TEXT("odom"));
+		FTransform Transform = Actor->GetActorTransform();
+    FVector Scale = Transform.GetScale3D();
+		geometry_msgs::Transform transform = FROSHelper::ConvertTransformUE4ToROS(Transform);
+		geometry_msgs::Vector3 vec = transform.GetTranslation();
+		geometry_msgs::Quaternion quat = transform.GetRotation();
+		geometry_msgs::Pose pose(geometry_msgs::Point(vec.GetX(), vec.GetY(), vec.GetZ()), quat);
+		geometry_msgs::Vector3 scale(0.3, 0.1, 0.1);
+		TArray<geometry_msgs::Point> Points;
+		TArray<std_msgs::ColorRGBA> Colors;
+
+		TArray<UMeshComponent*> PaintableComponents;
+		Actor->GetComponents<UMeshComponent>(PaintableComponents);
+
+		for (auto MeshComponent : PaintableComponents)
+		{
+			if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
+			{
+				int ColorID = SkeletalMeshComponent->CustomDepthStencilValue;
+				float B = LabelColorTable[4*4*ColorID], G = LabelColorTable[4*4*ColorID + 1], R = LabelColorTable[4*4*ColorID + 2], A = LabelColorTable[4*ColorID + 3];
+				//UE_LOG(LogUnrealCV, Log, TEXT("ID = %d, Color = %f %f %f %f"), ColorID, R, G, B, A);
+				std_msgs::ColorRGBA color(R/255.0, G/255.0, B/255.0, A/255.0);
+				//				Marker.SetColor(std_msgs::ColorRGBA(R, G, B, A));
+				visualization_msgs::Marker Marker(
+						Header, Name+TEXT("_arrow"),
+						visualization_msgs::Marker::ARROW, visualization_msgs::Marker::ADD,
+						pose, scale,
+						color, 0,
+						true,
+						Points, Colors, TEXT("TEST"), TEXT(""), false
+						);
+				MarkerArray.Add(Marker);
+
+				ROSBuildSkeletalState(SkeletalMeshComponent, Points, Colors);
+
+				geometry_msgs::Vector3 scale2(0.1, 0.1, 0.1);
+				visualization_msgs::Marker Marker2(
+							Header, Name,
+							visualization_msgs::Marker::POINTS, visualization_msgs::Marker::ADD,
+							pose, scale2,
+							color, 0,
+							true,
+							Points, Colors, TEXT("TEST"), TEXT(""), false
+						);
+				MarkerArray.Add(Marker2);
+				break;
+			}
+		}
+	}
+	TSharedPtr<visualization_msgs::MarkerArray> MarkerArrayMsg = MakeShareable(new visualization_msgs::MarkerArray(MarkerArray));
+	//UE_LOG(LogUnrealCV, Log, TEXT("%s"), *MarkerArrayMsg->ToString());
+	Handler->PublishMsg("/ue4/persons", MarkerArrayMsg);
 }
 
 void URemoteMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -436,6 +584,12 @@ void URemoteMovementComponent::BeginPlay()
 	FString Topic = TEXT("/ue4/segmentation_color_table");
 	TSharedPtr<FROSBridgePublisher> LabelColorTablePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(Topic, TEXT("sensor_msgs/Image")));
 	Handler->AddPublisher(LabelColorTablePublisher);
+
+	TSharedPtr<FROSBridgePublisher> MarkerArrayPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/persons"), TEXT("visualization_msgs/MarkerArray")));
+	Handler->AddPublisher(MarkerArrayPublisher);
+
+	TSharedPtr<FROSBridgePublisher> MarkerPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/person"), TEXT("visualization_msgs/Marker")));
+	Handler->AddPublisher(MarkerPublisher);
 
 	// Connect to ROSBridge Websocket server.
 	Handler->Connect();

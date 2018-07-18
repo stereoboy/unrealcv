@@ -4,6 +4,8 @@
 #include "ROSBridgePublisher.h"
 #include "ROSBridgeSubscriber.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Point.h"
+#include "std_msgs/ColorRGBA.h"
 #include "RemoteMovementComponent.generated.h"
 
 
@@ -57,6 +59,8 @@ protected:
 	int LabelColorTableWidth;
 	int LabelColorTableHeight;
 	int LabelColorTablePubCount;
+	bool bSkeletalActorMapInitialized;
+	TMap<FString, AActor*> SkeletalActorMap;
 
 	TSharedPtr<FROSBridgeHandler> Handler;
 
@@ -84,5 +88,7 @@ public:
 protected:
 	void ROSPublishOdom(float DeltaTime);
 	void ROSPublishJointState(float DeltaTime);
+	void ROSPublishSkeletalState(float DeltaTime);
+	void ROSBuildSkeletalState(USkeletalMeshComponent* SkeletalMeshComponent, TArray<geometry_msgs::Point> &Points, TArray<std_msgs::ColorRGBA> &Colors);
 	void ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
 };
