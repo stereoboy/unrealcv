@@ -55,9 +55,6 @@ protected:
 	FVector	PrevLinear;
 	FRotator PrevAngular;
 
-	TArray<uint8> LabelColorTable;
-	int LabelColorTableWidth;
-	int LabelColorTableHeight;
 	int LabelColorTablePubCount;
 	bool bSkeletalActorMapInitialized;
 	TMap<FString, AActor*> SkeletalActorMap;

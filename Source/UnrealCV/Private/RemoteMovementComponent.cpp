@@ -14,7 +14,268 @@
 #include "Kismet/KismetMathLibrary.h"
 
 #define BASE_LINK_HEIGHT 0.08322
-
+/*
+	Hard Coded Color Table seg_color_pallet.png
+*/
+TArray<uint8> LabelColorTable =
+{
+	 57, 181, 55, 255,
+	 6, 108, 153, 255,
+	 191, 105, 112, 255,
+	 72, 121, 89, 255,
+	 64, 225, 190, 255,
+	 59, 190, 206, 255,
+	 36, 13, 81, 255,
+	 195, 176, 115, 255,
+	 27, 171, 161, 255,
+	 180, 169, 135, 255,
+	 199, 26, 29, 255,
+	 239, 16, 102, 255,
+	 146, 107, 242, 255,
+	 23, 198, 156, 255,
+	 160, 89, 49, 255,
+	 116, 218, 68, 255,
+	 9, 236, 11, 255,
+	 8, 30, 196, 255,
+	 28, 67, 121, 255,
+	 65, 53, 0, 255,
+	 70, 52, 146, 255,
+	 143, 149, 226, 255,
+	 171, 126, 151, 255,
+	 7, 39, 194, 255,
+	 161, 120, 205, 255,
+	 60, 51, 212, 255,
+	 208, 80, 211, 255,
+	 188, 135, 189, 255,
+	 205, 72, 54, 255,
+	 157, 252, 103, 255,
+	 123, 21, 124, 255,
+	 69, 132, 19, 255,
+	 132, 237, 195, 255,
+	 175, 253, 94, 255,
+	 87, 251, 182, 255,
+	 242, 162, 90, 255,
+	 1, 29, 199, 255,
+	 229, 12, 254, 255,
+	 244, 196, 35, 255,
+	 49, 163, 220, 255,
+	 214, 254, 86, 255,
+	 129, 3, 152, 255,
+	 106, 31, 92, 255,
+	 90, 229, 207, 255,
+	 48, 75, 125, 255,
+	 74, 55, 98, 255,
+	 238, 129, 126, 255,
+	 109, 153, 222, 255,
+	 34, 152, 85, 255,
+	 31, 69, 173, 255,
+	 125, 128, 37, 255,
+	 33, 19, 58, 255,
+	 119, 57, 134, 255,
+	 115, 124, 218, 255,
+	 200, 0, 120, 255,
+	 92, 131, 225, 255,
+	 16, 90, 246, 255,
+	 241, 155, 51, 255,
+	 155, 97, 202, 255,
+	 182, 145, 184, 255,
+	 44, 232, 96, 255,
+	 133, 244, 133, 255,
+	 29, 191, 180, 255,
+	 192, 222, 1, 255,
+	 104, 242, 99, 255,
+	 219, 168, 91, 255,
+	 217, 54, 65, 255,
+	 130, 66, 148, 255,
+	 204, 102, 203, 255,
+	 75, 78, 216, 255,
+	 250, 20, 234, 255,
+	 24, 206, 109, 255,
+	 17, 194, 164, 255,
+	 236, 23, 157, 255,
+	 88, 114, 158, 255,
+	 110, 22, 245, 255,
+	 35, 17, 67, 255,
+	 93, 213, 181, 255,
+	 42, 179, 170, 255,
+	 148, 187, 52, 255,
+	 111, 200, 247, 255,
+	 174, 62, 25, 255,
+	 240, 25, 100, 255,
+	 144, 195, 191, 255,
+	 67, 36, 252, 255,
+	 149, 77, 241, 255,
+	 141, 33, 237, 255,
+	 85, 230, 119, 255,
+	 108, 34, 28, 255,
+	 254, 98, 78, 255,
+	 30, 161, 114, 255,
+	 243, 50, 75, 255,
+	 253, 226, 66, 255,
+	 76, 104, 46, 255,
+	 216, 234, 8, 255,
+	 102, 241, 15, 255,
+	 71, 14, 93, 255,
+	 193, 255, 192, 255,
+	 164, 41, 253, 255,
+	 120, 175, 24, 255,
+	 231, 243, 185, 255,
+	 97, 233, 169, 255,
+	 145, 215, 243, 255,
+	 21, 137, 72, 255,
+	 101, 113, 160, 255,
+	 13, 92, 214, 255,
+	 147, 140, 167, 255,
+	 181, 109, 101, 255,
+	 126, 118, 53, 255,
+	 32, 177, 3, 255,
+	 99, 63, 40, 255,
+	 153, 139, 186, 255,
+	 100, 207, 88, 255,
+	 227, 146, 71, 255,
+	 187, 38, 236, 255,
+	 215, 4, 215, 255,
+	 66, 211, 18, 255,
+	 134, 49, 113, 255,
+	 63, 42, 47, 255,
+	 127, 103, 219, 255,
+	 137, 240, 57, 255,
+	 211, 133, 227, 255,
+	 201, 71, 145, 255,
+	 183, 173, 217, 255,
+	 113, 40, 250, 255,
+	 68, 125, 208, 255,
+	 249, 186, 224, 255,
+	 46, 148, 69, 255,
+	 20, 85, 239, 255,
+	 224, 116, 108, 255,
+	 26, 214, 56, 255,
+	 43, 147, 179, 255,
+	 172, 188, 48, 255,
+	 47, 83, 221, 255,
+	 218, 166, 155, 255,
+	 189, 217, 62, 255,
+	 122, 180, 198, 255,
+	 169, 144, 201, 255,
+	 14, 2, 132, 255,
+	 114, 189, 128, 255,
+	 112, 227, 163, 255,
+	 177, 157, 45, 255,
+	 142, 86, 64, 255,
+	 163, 193, 118, 255,
+	 79, 32, 14, 255,
+	 170, 45, 200, 255,
+	 2, 81, 74, 255,
+	 212, 37, 59, 255,
+	 225, 35, 73, 255,
+	 39, 224, 95, 255,
+	 220, 170, 84, 255,
+	 173, 58, 159, 255,
+	 237, 91, 17, 255,
+	 84, 95, 31, 255,
+	 248, 201, 34, 255,
+	 209, 73, 63, 255,
+	 107, 235, 129, 255,
+	 40, 115, 231, 255,
+	 95, 74, 36, 255,
+	 154, 228, 238, 255,
+	 54, 212, 61, 255,
+	 165, 94, 13, 255,
+	 0, 174, 141, 255,
+	 255, 167, 140, 255,
+	 91, 93, 117, 255,
+	 186, 10, 183, 255,
+	 61, 28, 165, 255,
+	 194, 238, 144, 255,
+	 41, 158, 12, 255,
+	 234, 110, 76, 255,
+	 121, 9, 150, 255,
+	 246, 1, 142, 255,
+	 198, 136, 230, 255,
+	 233, 60, 5, 255,
+	 80, 250, 232, 255,
+	 56, 112, 143, 255,
+	 156, 70, 187, 255,
+	 62, 185, 2, 255,
+	 226, 223, 138, 255,
+	 222, 183, 122, 255,
+	 3, 245, 166, 255,
+	 140, 6, 175, 255,
+	 210, 59, 240, 255,
+	 10, 44, 248, 255,
+	 52, 82, 83, 255,
+	 167, 248, 223, 255,
+	 150, 15, 87, 255,
+	 117, 178, 111, 255,
+	 22, 84, 197, 255,
+	 124, 208, 235, 255,
+	 45, 76, 9, 255,
+	 50, 24, 176, 255,
+	 251, 159, 154, 255,
+	 207, 111, 149, 255,
+	 15, 231, 168, 255,
+	 202, 247, 209, 255,
+	 152, 205, 80, 255,
+	 213, 221, 178, 255,
+	 38, 8, 27, 255,
+	 51, 117, 244, 255,
+	 190, 68, 107, 255,
+	 139, 199, 23, 255,
+	 168, 88, 171, 255,
+	 58, 202, 136, 255,
+	 86, 46, 6, 255,
+	 176, 127, 105, 255,
+	 197, 249, 174, 255,
+	 138, 172, 172, 255,
+	 81, 142, 228, 255,
+	 185, 204, 7, 255,
+	 247, 61, 22, 255,
+	 78, 100, 233, 255,
+	 105, 65, 127, 255,
+	 158, 87, 33, 255,
+	 252, 156, 139, 255,
+	 136, 7, 42, 255,
+	 179, 99, 20, 255,
+	 223, 150, 79, 255,
+	 184, 182, 131, 255,
+	 37, 123, 110, 255,
+	 96, 138, 60, 255,
+	 94, 96, 210, 255,
+	 18, 48, 123, 255,
+	 162, 197, 137, 255,
+	 5, 18, 188, 255,
+	 151, 219, 39, 255,
+	 135, 143, 204, 255,
+	 73, 79, 249, 255,
+	 178, 64, 77, 255,
+	 77, 246, 41, 255,
+	 4, 154, 16, 255,
+	 19, 134, 116, 255,
+	 235, 122, 4, 255,
+	 230, 106, 177, 255,
+	 12, 119, 21, 255,
+	 98, 5, 104, 255,
+	 53, 130, 50, 255,
+	 25, 192, 30, 255,
+	 166, 165, 26, 255,
+	 82, 160, 10, 255,
+	 131, 43, 106, 255,
+	 103, 216, 44, 255,
+	 221, 101, 255, 255,
+	 196, 151, 32, 255,
+	 89, 220, 213, 255,
+	 228, 209, 70, 255,
+	 83, 184, 97, 255,
+	 232, 239, 82, 255,
+	 128, 164, 251, 255,
+	 245, 11, 193, 255,
+	 159, 27, 38, 255,
+	 203, 141, 229, 255,
+	 55, 56, 130, 255,
+	 11, 210, 147, 255,
+	 118, 203, 162, 255,
+	 206, 47, 43, 255,
+};
 URemoteMovementComponent::FROSTwistSubScriber::FROSTwistSubScriber(const FString& InTopic,  URemoteMovementComponent* Component) :
 	FROSBridgeSubscriber(InTopic, TEXT("geometry_msgs/Twist"))
 {
@@ -141,23 +402,8 @@ URemoteMovementComponent::URemoteMovementComponent()
 	this->PrevLinear = FVector(0.0, 0.0, 0.0);
 	this->PrevAngular = FRotator(0.0, 0.0, 0.0);
 
-	//UTexture2D* Texture = Cast<UTexture2D>(LoadObjFromPath(UTexture2D::StaticClass(), NULL, *TEXT("/UnrealCV/seg_color_pallet")));
-	// FObjectFinder should be called in constructors
-	ConstructorHelpers::FObjectFinder<UTexture2D> TextureObject(TEXT("/UnrealCV/seg_color_pallet"));
-	UTexture2D* Texture = TextureObject.Object;
-	Texture->UpdateResource();
-	FTexture2DMipMap* MM = &Texture->PlatformData->Mips[0];
-	LabelColorTableWidth = MM->SizeX;
-	LabelColorTableHeight = MM->SizeY;
-	LabelColorTable.AddZeroed(4*LabelColorTableWidth*LabelColorTableHeight);
-
-	FByteBulkData* RawImageData = &MM->BulkData;
-	FColor* FormatedImageData = static_cast<FColor*>(RawImageData->Lock(LOCK_READ_ONLY));
-	FMemory::Memcpy(LabelColorTable.GetData(), FormatedImageData, LabelColorTable.Num());
-	RawImageData->Unlock();
-	LabelColorTablePubCount = 0;
-
-	bSkeletalActorMapInitialized = false;
+  LabelColorTablePubCount = 0;
+  bSkeletalActorMapInitialized = false;
 }
 
 URemoteMovementComponent* URemoteMovementComponent::Create(FName Name, APawn* Pawn)
@@ -339,8 +585,8 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 		std_msgs::Header Header(LabelColorTablePubCount, ROSTime, TEXT(""));
 		TSharedPtr<sensor_msgs::Image> ColorTableMsg =
 			MakeShareable(new sensor_msgs::Image(
-				Header, LabelColorTableHeight, LabelColorTableWidth, TEXT("rgba8")/*4Channel*/, true,
-				LabelColorTableWidth * 4, LabelColorTable)
+				Header, 1, LabelColorTable.Num(), TEXT("rgba8")/*4Channel*/, true,
+				LabelColorTable.Num() * 4, LabelColorTable)
 			);
 
 		Handler->PublishMsg(Topic, ColorTableMsg);
@@ -353,7 +599,7 @@ void URemoteMovementComponent::ROSBuildSkeletalState(USkeletalMeshComponent* Ske
 {
 	FTransform Transform = SkeletalMeshComponent->GetComponentTransform();
 	FVector Scale = Transform.GetScale3D();
-	UE_LOG(LogUnrealCV, Log, TEXT("Scale %f %f %f"), Scale.X, Scale.Y, Scale.Z);
+	//UE_LOG(LogUnrealCV, Log, TEXT("Scale %f %f %f"), Scale.X, Scale.Y, Scale.Z);
 	TArray<FName> Labels = {TEXT("LABEL_HEAD"), TEXT("LABEL_UARM_L"), TEXT("LABEL_UARM_R"), TEXT("LABEL_LARM_L"), TEXT("LABEL_LARM_R"), TEXT("LABEL_HAND_L"), TEXT("LABEL_HAND_R"), TEXT("LABEL_ULEG_L"), TEXT("LABEL_ULEG_R"), TEXT("LABEL_LLEG_L"), TEXT("LABEL_LLEG_R"), TEXT("LABEL_FOOT_L"), TEXT("LABEL_FOOT_R")};
 	for (auto& Label: Labels)
 	{
@@ -437,7 +683,7 @@ void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
 		// TODO
 		FString Name = Elem.Key;
 		AActor *Actor = Elem.Value;
-		UE_LOG(LogUnrealCV, Log, TEXT("Publish Marker for %s"), *Name);
+		//UE_LOG(LogUnrealCV, Log, TEXT("Publish Marker for %s"), *Name);
 		FROSTime ROSTime = FROSTime();
 		std_msgs::Header Header(0, ROSTime, TEXT("odom"));
 		FTransform Transform = Actor->GetActorTransform();
@@ -458,7 +704,7 @@ void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
 			if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
 			{
 				int ColorID = SkeletalMeshComponent->CustomDepthStencilValue;
-				float B = LabelColorTable[4*4*ColorID], G = LabelColorTable[4*4*ColorID + 1], R = LabelColorTable[4*4*ColorID + 2], A = LabelColorTable[4*ColorID + 3];
+				float B = LabelColorTable[4*ColorID], G = LabelColorTable[4*ColorID + 1], R = LabelColorTable[4*ColorID + 2], A = LabelColorTable[4*ColorID + 3];
 				//UE_LOG(LogUnrealCV, Log, TEXT("ID = %d, Color = %f %f %f %f"), ColorID, R, G, B, A);
 				std_msgs::ColorRGBA color(R/255.0, G/255.0, B/255.0, A/255.0);
 				//				Marker.SetColor(std_msgs::ColorRGBA(R, G, B, A));
@@ -593,19 +839,6 @@ void URemoteMovementComponent::BeginPlay()
 
 	// Connect to ROSBridge Websocket server.
 	Handler->Connect();
-
-#if 0
-	FROSTime ROSTime = FROSTime();
-
-	std_msgs::Header Header(0, ROSTime, TEXT(""));
-	TSharedPtr<sensor_msgs::Image> ColorTableMsg =
-		MakeShareable(new sensor_msgs::Image(
-			Header, LabelColorTableHeight, LabelColorTableWidth, TEXT("rgba8")/*4Channel*/, true,
-			LabelColorTableWidth * 4, LabelColorTable)
-		);
-
-	Handler->PublishMsg(Topic, ColorTableMsg);
-#endif
 }
 
 void URemoteMovementComponent::EndPlay(const EEndPlayReason::Type Reason)
