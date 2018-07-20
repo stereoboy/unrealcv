@@ -52,11 +52,19 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 			CaptureComponentList.Add(camCom);
 			actor->AddCaptureComponent(camCom);
 		}
-		else if (camera->GetName().Compare(TEXT("RGBDCamera")) == 0)
+		else if (camera->GetName().Compare(TEXT("RGBDCamRGB")) == 0)
 		{
-			TArray<FString> SupportedModes = {TEXT("lit"), TEXT("depth")};
+			TArray<FString> SupportedModes = {TEXT("lit")};
 			UGTCameraCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
-			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("rgbd_cam"), TEXT("rgbd_img_link"));
+			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("rgbd_cam"), TEXT("rgbd_rgb_img_link"));
+			CaptureComponentList.Add(camCom);
+			actor->AddCaptureComponent(camCom);
+		}
+		else if (camera->GetName().Compare(TEXT("RGBDCamDepth")) == 0)
+		{
+			TArray<FString> SupportedModes = {TEXT("depth")};
+			UGTCameraCaptureComponent* camCom = UGTCameraCaptureComponent::Create(FName(*camera->GetName()), Pawn, camera->GetOwner(), camera, SupportedModes);
+			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("rgbd_cam"), TEXT("rgbd_depth_img_link"));
 			CaptureComponentList.Add(camCom);
 			actor->AddCaptureComponent(camCom);
 		}
