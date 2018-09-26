@@ -571,7 +571,11 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable
 	(new rosgraph_msgs::Clock(FROSTime(GameSeconds, GameUseconds)));
 	*/
-	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(FROSTime()));
+
+	float GameTime = GetWorld()->GetTimeSeconds();
+	uint32 Secs = (uint32)GameTime;
+	uint32 NSecs = (uint32)((GameTime - Secs)*1000000000);
+	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(FROSTime(Secs, NSecs)));
 	Handler->PublishMsg("/clock", Clock);
 
 	ROSPublishOdom(DeltaTime);
