@@ -276,6 +276,41 @@ TArray<uint8> LabelColorTable =
 	 118, 203, 162, 255,
 	 206, 47, 43, 255,
 };
+
+URemoteMovementComponent::FROSPoseStampedSubScriber::FROSPoseStampedSubScriber(const FString& InTopic,  URemoteMovementComponent* Component) :
+	FROSBridgeSubscriber(InTopic, TEXT("geometry_msgs/PoseStamped"))
+{
+	this->Component = Component;
+}
+
+URemoteMovementComponent::FROSPoseStampedSubScriber::~FROSPoseStampedSubScriber()
+{
+};
+
+TSharedPtr<FROSBridgeMsg> URemoteMovementComponent::FROSPoseStampedSubScriber::ParseMessage
+(TSharedPtr<FJsonObject> JsonObject) const
+{
+	TSharedPtr<geometry_msgs::PoseStamped> PoseStampedMessage = MakeShareable<geometry_msgs::PoseStamped>(new geometry_msgs::PoseStamped());
+	PoseStampedMessage->FromJson(JsonObject);
+	return StaticCastSharedPtr<FROSBridgeMsg>(PoseStampedMessage);
+}
+
+void URemoteMovementComponent::FROSPoseStampedSubScriber::Callback(TSharedPtr<FROSBridgeMsg> InMsg)
+{
+	// downcast to subclass using StaticCastSharedPtr function
+	TSharedPtr<geometry_msgs::PoseStamped> PoseStampedMessage = StaticCastSharedPtr<geometry_msgs::PoseStamped>(InMsg);
+	UE_LOG(LogUnrealCV, Log, TEXT("Message received! Content: %s"), *PoseStampedMessage->ToString());
+
+	// Convert Relative Translation to Global Translation
+	FVector  Position = FROSHelper::ConvertPointROSToUE4(PoseStampedMessage->GetPose().GetPosition());
+	FQuat Orientation = FROSHelper::ConvertQuatROSToUE4(PoseStampedMessage->GetPose().GetOrientation());
+
+	APawn* Pawn = FUE4CVServer::Get().GetPawn();
+	if (Pawn)
+		Pawn->SetActorLocationAndRotation(Position, Orientation.Rotator());
+	return;
+}
+
 URemoteMovementComponent::FROSTwistSubScriber::FROSTwistSubScriber(const FString& InTopic,  URemoteMovementComponent* Component) :
 	FROSBridgeSubscriber(InTopic, TEXT("geometry_msgs/Twist"))
 {
@@ -826,6 +861,8 @@ void URemoteMovementComponent::BeginPlay()
 	Handler->AddPublisher(JointStatePublisher);
 
 	// Add topic subscribers
+	TSharedPtr<FROSPoseStampedSubScriber> PoseStampedSubscriber = MakeShareable<FROSPoseStampedSubScriber>(new FROSPoseStampedSubScriber(TEXT("/ue4/robot/ctrl/pose"), this));
+	Handler->AddSubscriber(PoseStampedSubscriber);
 	TSharedPtr<FROSTwistSubScriber> TwistSubscriber = MakeShareable<FROSTwistSubScriber>(new FROSTwistSubScriber(TEXT("/ue4/robot/ctrl/move"), this));
 	Handler->AddSubscriber(TwistSubscriber);
 	TSharedPtr<FROSJointStateSubScriber> JointStateSubscriber = MakeShareable<FROSJointStateSubScriber>(new FROSJointStateSubScriber(TEXT("/ue4/robot/ctrl/joint_states"), this));
