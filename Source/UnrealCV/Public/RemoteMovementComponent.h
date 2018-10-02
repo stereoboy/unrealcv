@@ -3,6 +3,7 @@
 #include "ROSBridgeHandler.h"
 #include "ROSBridgePublisher.h"
 #include "ROSBridgeSubscriber.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Point.h"
 #include "std_msgs/ColorRGBA.h"
@@ -20,6 +21,16 @@ UCLASS()
 class UNREALCV_API URemoteMovementComponent : public UMovementComponent
 {
 	GENERATED_BODY()
+
+	class FROSPoseStampedSubScriber : public FROSBridgeSubscriber
+	{
+		URemoteMovementComponent* Component;
+	public:
+		FROSPoseStampedSubScriber(const FString& InTopic, URemoteMovementComponent* Component);
+		~FROSPoseStampedSubScriber() override;
+		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
+		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
+	};
 
 	class FROSTwistSubScriber : public FROSBridgeSubscriber
 	{
