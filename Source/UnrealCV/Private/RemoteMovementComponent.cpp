@@ -13,7 +13,6 @@
 #include "ROSHelper.h"
 #include "Kismet/KismetMathLibrary.h"
 
-#define BASE_LINK_HEIGHT 0.08322
 /*
 	Hard Coded Color Table seg_color_pallet.png
 */
@@ -479,6 +478,20 @@ void URemoteMovementComponent::Init(void)
 			JointComponentMap.Add(name, joint);
 			UE_LOG(LogUnrealCV, Log, TEXT("-> joint(%s) added"), *name);
 		}
+
+		if (joint->GetName() == "Footprint")
+		{
+			FootprintComponent = joint;
+		}
+	}
+
+	if (!FootprintComponent)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("[ERROR] No Footprint Component!"));
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, TEXT("[INFO] Set Footprint Component!"));
 	}
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 }
@@ -494,15 +507,13 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 	APawn* OwningPawn = Cast<APawn>(this->GetOwner());
 	std_msgs::Header Header(0, GetROSSimTime(), "odom");
 
-	FTransform Transform = OwningPawn->GetActorTransform();
-
-	// publish tf
+	if (!FootprintComponent)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("[ERROR] No Footprint Component!"));
+		return;
+	}
+	FTransform Transform = OwningPawn->GetActorTransform()*FootprintComponent->GetRelativeTransform();
 	geometry_msgs::Transform transform = FROSHelper::ConvertTransformUE4ToROS(Transform);
-	transform.SetTranslation(
-		geometry_msgs::Vector3(	transform.GetTranslation().GetX(),
-								transform.GetTranslation().GetY(),
-								transform.GetTranslation().GetZ() - BASE_LINK_HEIGHT)
-	);
 
 	TArray<geometry_msgs::TransformStamped> transforms = { geometry_msgs::TransformStamped(Header, "base_footprint", transform) };
 	TSharedPtr<tf2_msgs::TFMessage> odomtrans = MakeShareable(new tf2_msgs::TFMessage(transforms));

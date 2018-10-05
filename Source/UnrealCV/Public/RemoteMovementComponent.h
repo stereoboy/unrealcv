@@ -75,6 +75,8 @@ protected:
 	TArray<UGTCameraCaptureComponent*> CaptureComponentList;
 	TMap<FString, UStaticMeshComponent*> JointComponentMap;
 
+	UStaticMeshComponent* FootprintComponent;
+
 public:
 	static URemoteMovementComponent* Create(FName Name, APawn* Pawn);
 
