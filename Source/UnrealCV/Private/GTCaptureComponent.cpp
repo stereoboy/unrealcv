@@ -680,7 +680,7 @@ void UGTCameraCaptureComponent::PublishImage(void)
 	ROSDBG_TC_BEGIN();
 	double FOV = this->CameraComponent->FieldOfView;
 
-	FROSTime ROSTime = FROSTime();
+	FROSTime ROSTime = GetROSSimTime();
 	TArray<FColor> ImageData;
 	int32 Height = 0, Width = 0;
 	this->CaptureImage("lit", ImageData, Width, Height);
@@ -754,7 +754,7 @@ void UGTCameraCaptureComponent::PublishDepth(void)
 	ROSDBG_TC_BEGIN();
 	float FOV = this->CameraComponent->FieldOfView;
 
-	FROSTime ROSTime = FROSTime();
+	FROSTime ROSTime = GetROSSimTime();
 	TArray<FFloat16Color> FloatImageData;
 	int32 Height = 0, Width = 0;
 	this->CaptureFloat16Image("depth", FloatImageData, Width, Height);
@@ -789,7 +789,7 @@ void UGTCameraCaptureComponent::PublishLabel(void)
 	ROSDBG_TC_BEGIN();
 	double FOV = this->CameraComponent->FieldOfView;
 
-	FROSTime ROSTime = FROSTime();
+	FROSTime ROSTime = GetROSSimTime();
 	TArray<FColor> ImageData;
 	int32 Height = 0, Width = 0;
 	this->CaptureImage("object_mask", ImageData, Width, Height);
@@ -814,8 +814,8 @@ void UGTCameraCaptureComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTi
 	// publish to ROS MASTER
 
 	// publish tf
-	std_msgs::Header Header(0, FROSTime(), "img_link");
-	FTransform Transform = this->CameraComponent->GetRelativeTransform();
+	//std_msgs::Header Header(0, FROSTime(), "img_link");
+	//FTransform Transform = this->CameraComponent->GetRelativeTransform();
 	//FVector loc = current.GetLocation();
 	//FQuat quat = current.GetRotation();
 

@@ -94,6 +94,14 @@ public:
 	}
 
 protected:
+	FROSTime GetROSSimTime()
+	{
+		float GameTime = GetWorld()->GetTimeSeconds();
+		uint32 Secs = (uint32)GameTime;
+		uint32 NSecs = (uint32)((GameTime - Secs)*1000000000);
+		return FROSTime(Secs, NSecs);
+	}
+
 	void ROSPublishOdom(float DeltaTime);
 	void ROSPublishJointState(float DeltaTime);
 	void ROSPublishSkeletalState(float DeltaTime);

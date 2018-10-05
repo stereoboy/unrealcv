@@ -130,6 +130,13 @@ public:
 	FTransform GetInitialTransform(void) { return InitialTransform; }
 
 protected:
+	FROSTime GetROSSimTime()
+	{
+		float GameTime = GetWorld()->GetTimeSeconds();
+		uint32 Secs = (uint32)GameTime;
+		uint32 NSecs = (uint32)((GameTime - Secs)*1000000000);
+		return FROSTime(Secs, NSecs);
+	}
 
 	void PackFastMsgHeader(TArray<uint8> &ByteData, FString Type, FString Topic, FString MsgType, FROSTime Stamp, FString Name, FString FrameId, uint32 Height, uint32 Width);
 	void ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);

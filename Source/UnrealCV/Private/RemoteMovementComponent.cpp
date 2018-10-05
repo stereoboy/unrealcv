@@ -492,7 +492,7 @@ void URemoteMovementComponent::SetVelocityCmd(const FTransform& InVelocityCmd)
 void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 {
 	APawn* OwningPawn = Cast<APawn>(this->GetOwner());
-	std_msgs::Header Header(0, FROSTime(), "odom");
+	std_msgs::Header Header(0, GetROSSimTime(), "odom");
 
 	FTransform Transform = OwningPawn->GetActorTransform();
 
@@ -548,7 +548,7 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 
 void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 {
-	std_msgs::Header Header(0, FROSTime(), "");
+	std_msgs::Header Header(0, GetROSSimTime(), "");
 	TArray<FString> Names = { TEXT("main_cam_base_joint"), TEXT("main_cam_pan_joint"), TEXT("main_cam_tilt_joint") };
 	TArray<double> Positions;
 	TArray<double> Velocities;
@@ -599,18 +599,7 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	// publish clock
-	/*
-	float GameTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
-	uint64 GameSeconds = (int)GameTime;
-	uint64 GameUseconds = (GameTime - GameSeconds) * 1000000000;
-	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable
-	(new rosgraph_msgs::Clock(FROSTime(GameSeconds, GameUseconds)));
-	*/
-
-	float GameTime = GetWorld()->GetTimeSeconds();
-	uint32 Secs = (uint32)GameTime;
-	uint32 NSecs = (uint32)((GameTime - Secs)*1000000000);
-	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(FROSTime(Secs, NSecs)));
+	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(GetROSSimTime()));
 	Handler->PublishMsg("/clock", Clock);
 
 	ROSPublishOdom(DeltaTime);
@@ -620,7 +609,7 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 	if (LabelColorTablePubCount < 10)
 	{
 		FString Topic = TEXT("/ue4/segmentation_color_table");
-		FROSTime ROSTime = FROSTime();
+		FROSTime ROSTime = GetROSSimTime();
 		std_msgs::Header Header(LabelColorTablePubCount, ROSTime, TEXT(""));
 		TSharedPtr<sensor_msgs::Image> ColorTableMsg =
 			MakeShareable(new sensor_msgs::Image(
@@ -723,7 +712,7 @@ void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
 		FString Name = Elem.Key;
 		AActor *Actor = Elem.Value;
 		//UE_LOG(LogUnrealCV, Log, TEXT("Publish Marker for %s"), *Name);
-		FROSTime ROSTime = FROSTime();
+		FROSTime ROSTime = GetROSSimTime();
 		std_msgs::Header Header(0, ROSTime, TEXT("odom"));
 		FTransform Transform = Actor->GetActorTransform();
     FVector Scale = Transform.GetScale3D();
