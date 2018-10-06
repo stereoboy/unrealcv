@@ -636,7 +636,7 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 }
 void URemoteMovementComponent::ROSBuildSkeletalState(USkeletalMeshComponent* SkeletalMeshComponent, TArray<geometry_msgs::Point> &Points, TArray<std_msgs::ColorRGBA> &Colors)
 {
-	FTransform Transform = SkeletalMeshComponent->GetComponentTransform();
+	FTransform Transform = SkeletalMeshComponent->GetRelativeTransform();
 	FVector Scale = Transform.GetScale3D();
 	//UE_LOG(LogUnrealCV, Log, TEXT("Scale %f %f %f"), Scale.X, Scale.Y, Scale.Z);
 	TArray<FName> Labels = {TEXT("LABEL_HEAD"), TEXT("LABEL_UARM_L"), TEXT("LABEL_UARM_R"), TEXT("LABEL_LARM_L"), TEXT("LABEL_LARM_R"), TEXT("LABEL_HAND_L"), TEXT("LABEL_HAND_R"), TEXT("LABEL_ULEG_L"), TEXT("LABEL_ULEG_R"), TEXT("LABEL_LLEG_L"), TEXT("LABEL_LLEG_R"), TEXT("LABEL_FOOT_L"), TEXT("LABEL_FOOT_R")};
@@ -645,10 +645,22 @@ void URemoteMovementComponent::ROSBuildSkeletalState(USkeletalMeshComponent* Ske
 		const USkeletalMeshSocket* Socket = SkeletalMeshComponent->GetSocketByName(Label);
 		if (Socket)
 		{
+			//FIXME
+#if 0
 			//vec = FROSHelper::ConvertVectorUE4ToROS(Socket->GetSocketLocation(SkeletalMeshComponent));
 			geometry_msgs::Vector3 vec = FROSHelper::ConvertVectorUE4ToROS(SkeletalMeshComponent->GetBoneLocation(Socket->BoneName, EBoneSpaces::ComponentSpace));
 			Points.Add(geometry_msgs::Point(Scale.X*vec.GetX(), Scale.Y*vec.GetY(), Scale.Z*vec.GetZ()));
 			//Colors.Add(std_msgs::ColorRGBA(1.0, 1.0, 0.0, 1.0));
+#else
+			FVector Vec = SkeletalMeshComponent->GetBoneLocation(Label, EBoneSpaces::ComponentSpace);
+			if (Vec.Size() > 0)
+			{
+				FTransform LocalTransform = FTransform(Vec)*Transform;
+				geometry_msgs::Vector3 vec = FROSHelper::ConvertVectorUE4ToROS(LocalTransform.GetLocation());
+				Points.Add(geometry_msgs::Point(Scale.X*vec.GetX(), Scale.Y*vec.GetY(), Scale.Z*vec.GetZ()));
+			}
+			//Colors.Add(std_msgs::ColorRGBA(1.0, 1.0, 0.0, 1.0));
+#endif
 		}
 	}
 /*
@@ -671,8 +683,9 @@ void URemoteMovementComponent::ROSBuildSkeletalState(USkeletalMeshComponent* Ske
 		FVector Vec = SkeletalMeshComponent->GetBoneLocation(Label, EBoneSpaces::ComponentSpace);
 		if (Vec.Size() > 0)
 		{
-			geometry_msgs::Vector3 vec = FROSHelper::ConvertVectorUE4ToROS(Vec);
-			Points.Add(geometry_msgs::Point(Scale.X*vec.GetX(), Scale.Y*vec.GetY(), Scale.Z*vec.GetZ()));
+			FTransform LocalTransform = FTransform(Vec)*Transform;
+			geometry_msgs::Vector3 vec = FROSHelper::ConvertVectorUE4ToROS(LocalTransform.GetLocation());
+			Points.Add(geometry_msgs::Point(vec.GetX(), vec.GetY(), vec.GetZ()));
 			//Colors.Add(std_msgs::ColorRGBA(1.0, 1.0, 0.0, 1.0));
 		}
 	}
