@@ -512,7 +512,7 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("[ERROR] No Footprint Component!"));
 		return;
 	}
-	FTransform Transform = OwningPawn->GetActorTransform()*FootprintComponent->GetRelativeTransform();
+	FTransform Transform = FootprintComponent->GetRelativeTransform()*OwningPawn->GetActorTransform();
 	geometry_msgs::Transform transform = FROSHelper::ConvertTransformUE4ToROS(Transform);
 
 	TArray<geometry_msgs::TransformStamped> transforms = { geometry_msgs::TransformStamped(Header, "base_footprint", transform) };
