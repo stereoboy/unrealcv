@@ -352,7 +352,6 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 	float Factor = 1.0;
 	GlobalLinear.ToDirectionAndLength(Direction, Norm);
 
-	URemoteMovementComponent* Remote = FCaptureManager::Get().GetActor(0);
 	FTransform Vel = FTransform(Angular, Direction*Norm*Factor);
 	//FTransform Vel = FTransform(Angular, Linear);
 	this->Component->SetVelocityCmd(Vel);
@@ -517,7 +516,7 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 
 	TArray<geometry_msgs::TransformStamped> transforms = { geometry_msgs::TransformStamped(Header, "base_footprint", transform) };
 	TSharedPtr<tf2_msgs::TFMessage> odomtrans = MakeShareable(new tf2_msgs::TFMessage(transforms));
-	Handler->PublishMsg("/tf", odomtrans);
+	ROSHandler->PublishMsg("/tf", odomtrans);
 
 	// publish odometry
 	geometry_msgs::Vector3 vec = transform.GetTranslation();
@@ -549,9 +548,9 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 	geometry_msgs::TwistWithCovariance	twistwithcov(geometry_msgs::Twist(linear, angular), twistcov);
 
 	TSharedPtr<nav_msgs::Odometry> odometry = MakeShareable(new nav_msgs::Odometry(Header, TEXT("base_footprint"), posewithcov, twistwithcov));
-	Handler->PublishMsg("/ue4/odom", odometry);
+	ROSHandler->PublishMsg("/ue4/odom", odometry);
 
-	Handler->Process();
+	ROSHandler->Process();
 
 	PrevLinear = Transform.GetLocation();
 	PrevAngular = Transform.Rotator();
@@ -604,14 +603,14 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 	}
 
 	TSharedPtr<sensor_msgs::JointState> jointstates = MakeShareable(new sensor_msgs::JointState(Header, Names, Positions, Velocities, Efforts));
-	Handler->PublishMsg("/ue4/robot/joint_states", jointstates);
+	ROSHandler->PublishMsg("/ue4/robot/joint_states", jointstates);
 }
 
 void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	// publish clock
 	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(GetROSSimTime()));
-	Handler->PublishMsg("/clock", Clock);
+	ROSHandler->PublishMsg("/clock", Clock);
 
 	ROSPublishOdom(DeltaTime);
 
@@ -628,7 +627,7 @@ void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTic
 				LabelColorTable.Num() * 4, LabelColorTable)
 			);
 
-		Handler->PublishMsg(Topic, ColorTableMsg);
+		ROSHandler->PublishMsg(Topic, ColorTableMsg);
 		LabelColorTablePubCount++;
 	}
 
@@ -698,7 +697,7 @@ void URemoteMovementComponent::ROSBuildSkeletalState(USkeletalMeshComponent* Ske
 //				true,
 //        Points, Colors, TEXT("TEST"), TEXT(""), false
 //				));
-//	Handler->PublishMsg("/ue4/person", MarkerMsg);
+//	ROSHandler->PublishMsg("/ue4/person", MarkerMsg);
 }
 
 void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
@@ -788,7 +787,7 @@ void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
 	}
 	TSharedPtr<visualization_msgs::MarkerArray> MarkerArrayMsg = MakeShareable(new visualization_msgs::MarkerArray(MarkerArray));
 	//UE_LOG(LogUnrealCV, Log, TEXT("%s"), *MarkerArrayMsg->ToString());
-	Handler->PublishMsg("/ue4/persons", MarkerArrayMsg);
+	ROSHandler->PublishMsg("/ue4/persons", MarkerArrayMsg);
 }
 
 void URemoteMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -857,48 +856,48 @@ void URemoteMovementComponent::BeginPlay()
 	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 10"));
 
 	// Set websocket server address to ws://127.0.0.1:9001
-	Handler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_MASTER_PORT));
+	ROSHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_MASTER_PORT));
 
 	// Add topic subscribers and publishers
 	// Add service clients and servers
 	// **** Create publishers here ****
 	TSharedPtr<FROSBridgePublisher> Publisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/clock"), TEXT("rosgraph_msgs/Clock")));
-	Handler->AddPublisher(Publisher);
+	ROSHandler->AddPublisher(Publisher);
 
 	TSharedPtr<FROSBridgePublisher> OdomTfPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/tf"), TEXT("tf2_msgs/TFMessage")));
-	Handler->AddPublisher(OdomTfPublisher);
+	ROSHandler->AddPublisher(OdomTfPublisher);
 	TSharedPtr<FROSBridgePublisher> OdomPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/odom"), TEXT("nav_msgs/Odometry")));
-	Handler->AddPublisher(OdomPublisher);
+	ROSHandler->AddPublisher(OdomPublisher);
 
 	TSharedPtr<FROSBridgePublisher> JointStatePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/robot/joint_states"), TEXT("sensor_msgs/JointState")));
-	Handler->AddPublisher(JointStatePublisher);
+	ROSHandler->AddPublisher(JointStatePublisher);
 
 	// Add topic subscribers
 	TSharedPtr<FROSPoseStampedSubScriber> PoseStampedSubscriber = MakeShareable<FROSPoseStampedSubScriber>(new FROSPoseStampedSubScriber(TEXT("/ue4/robot/ctrl/pose"), this));
-	Handler->AddSubscriber(PoseStampedSubscriber);
+	ROSHandler->AddSubscriber(PoseStampedSubscriber);
 	TSharedPtr<FROSTwistSubScriber> TwistSubscriber = MakeShareable<FROSTwistSubScriber>(new FROSTwistSubScriber(TEXT("/ue4/robot/ctrl/move"), this));
-	Handler->AddSubscriber(TwistSubscriber);
+	ROSHandler->AddSubscriber(TwistSubscriber);
 	TSharedPtr<FROSJointStateSubScriber> JointStateSubscriber = MakeShareable<FROSJointStateSubScriber>(new FROSJointStateSubScriber(TEXT("/ue4/robot/ctrl/joint_states"), this));
-	Handler->AddSubscriber(JointStateSubscriber);
+	ROSHandler->AddSubscriber(JointStateSubscriber);
 
 	FString Topic = TEXT("/ue4/segmentation_color_table");
 	TSharedPtr<FROSBridgePublisher> LabelColorTablePublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(Topic, TEXT("sensor_msgs/Image")));
-	Handler->AddPublisher(LabelColorTablePublisher);
+	ROSHandler->AddPublisher(LabelColorTablePublisher);
 
 	TSharedPtr<FROSBridgePublisher> MarkerArrayPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/persons"), TEXT("visualization_msgs/MarkerArray")));
-	Handler->AddPublisher(MarkerArrayPublisher);
+	ROSHandler->AddPublisher(MarkerArrayPublisher);
 
 	TSharedPtr<FROSBridgePublisher> MarkerPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/person"), TEXT("visualization_msgs/Marker")));
-	Handler->AddPublisher(MarkerPublisher);
+	ROSHandler->AddPublisher(MarkerPublisher);
 
 	// Connect to ROSBridge Websocket server.
-	Handler->Connect();
+	ROSHandler->Connect();
 }
 
 void URemoteMovementComponent::EndPlay(const EEndPlayReason::Type Reason)
 {
 	// Disconnect the handler before parent ends
-	Handler->Disconnect();
+	ROSHandler->Disconnect();
 
 	Super::EndPlay(Reason);
 }

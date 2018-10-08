@@ -8,6 +8,7 @@
   */
 void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 {
+#if 0
 	// TODO: Only support one camera at the beginning
 	// TODO: Make this automatic from material loader.
 	// TODO: Get the list from GTCaptureComponent
@@ -73,6 +74,7 @@ void FCaptureManager::AttachGTCaptureComponentToCamera(APawn* Pawn)
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetFullGroupName(false));
 	}
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
+#endif
 }
 
 UGTCaptureComponent* FCaptureManager::GetCamera(int32 CameraId)

@@ -129,6 +129,9 @@ public:
 	FString GetROSName(void) { return ROSName; }
 	FTransform GetInitialTransform(void) { return InitialTransform; }
 
+	//TODO
+	//void SetROSHandler(TSharedPtr<FROSBridgeHandler> ROSHandler){ this->ROSHandler = ROSHandler; }
+
 protected:
 	FROSTime GetROSSimTime()
 	{

@@ -70,7 +70,7 @@ protected:
 	bool bSkeletalActorMapInitialized;
 	TMap<FString, AActor*> SkeletalActorMap;
 
-	TSharedPtr<FROSBridgeHandler> Handler;
+	TSharedPtr<FROSBridgeHandler> ROSHandler;
 
 	TArray<UGTCameraCaptureComponent*> CaptureComponentList;
 	TMap<FString, UStaticMeshComponent*> JointComponentMap;
@@ -94,6 +94,9 @@ public:
 	{
 		CaptureComponentList.Add(Component);
 	}
+
+	//TODO
+	//void SetROSHandler(TSharedPtr<FROSBridgeHandler> ROSHandler){ this->ROSHandler = ROSHandler; }
 
 protected:
 	FROSTime GetROSSimTime()
