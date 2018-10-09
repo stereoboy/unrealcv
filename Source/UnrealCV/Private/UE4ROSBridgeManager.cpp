@@ -159,13 +159,17 @@ void AUE4ROSBridgeManager::Tick(float DeltaSeconds)
 
 void AUE4ROSBridgeManager::EndPlay(const EEndPlayReason::Type Reason)
 {
+	UE_LOG(LogUnrealCV, Log, TEXT("AUE4ROSBridgeManager::::EndPlay()"));
+
 	for (auto Elem : ActorList)
 	{
+		Elem->RemoveFromRoot();
 		Elem->ConditionalBeginDestroy();
 	}
 	ActorList.Empty();
 	for (auto Elem : CaptureComponentList)
 	{
+		Elem->RemoveFromRoot();
 		Elem->ConditionalBeginDestroy();
 	}
 	CaptureComponentList.Empty();
