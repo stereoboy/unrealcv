@@ -5,6 +5,37 @@
 void AUE4ROSBridgeManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	/*
+	// https://answers.unrealengine.com/questions/704875/cannot-set-max-fps-in-417.html
+	// This code write the setting on GameUserSettings.ini
+	UGameUserSettings* Settings = GEngine->GetGameUserSettings();
+	Settings->SetFrameRateLimit(60.0f);
+	Settings->ApplySettings(true);
+	*/
+	/*
+	// https://answers.unrealengine.com/questions/221428/console-exec-command-from-c-fails-to-run.html
+	APlayerController* Controller = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (Controller)
+	{
+		FString result = Controller->ConsoleCommand(TEXT("t.MaxFPS 60"));
+	}
+	*/
+	/*
+	UWorld* World = FUE4CVServer::Get().GetGameWorld();
+	bool result = World->Exec(World, TEXT("t.MaxFPS 60"));
+	*/
+	/*
+	 * MaxFPS Setup is very important on LINUX. If it setup too high value for fast rendering, data order can be mixed up.
+	 *
+	 */
+	UE_LOG(LogUnrealCV, Warning, TEXT("URemoteMovementComponent::BeginPlay()"));
+	// setup for CustomDepthStencil buffer for label images
+	GEngine->Exec(GetWorld(), TEXT("r.CustomDepth 3"));
+	// FPS limitation for publishing stability
+	//GEngine->Exec(GetWorld(), TEXT("stat FPS"));
+	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 10"));
+
 	// Set websocket server address to ws://127.0.0.1:9001
 	ROSHandler = MakeShareable<FROSBridgeHandler>(new FROSBridgeHandler(TEXT(ROS_MASTER_ADDR), ROS_MASTER_PORT));
 
@@ -134,6 +165,9 @@ void AUE4ROSBridgeManager::EndPlay(const EEndPlayReason::Type Reason)
 
 	ROSHandler->Disconnect();
 	// Disconnect the handler before parent ends
+
+	UE_LOG(LogUnrealCV, Warning, TEXT("URemoteMovementComponent::EndPlay()"));
+	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 0"));
 
 	Super::EndPlay(Reason);
 }
