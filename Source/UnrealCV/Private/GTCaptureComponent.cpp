@@ -858,7 +858,7 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 
 	// Update rotation of each frame
 	// from ab237f46dc0eee40263acbacbe938312eb0dffbb:CameraComponent.cpp:232
-	UE_LOG(LogUnrealCV, Log, TEXT("UGTCameraCaptureComponent::TickComponent()"));
+	//UE_LOG(LogUnrealCV, Log, TEXT("UGTCameraCaptureComponent::TickComponent()"));
 	check(this->Pawn); // this GTCapturer should be released, if the Pawn is deleted.
 	check(this->CameraActor);
 	check(this->CameraComponent); // this GTCapturer should be released, if the Pawn is deleted.
