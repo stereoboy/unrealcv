@@ -2,6 +2,11 @@
 #include "UE4ROSBridgeManager.h"
 #include "rosgraph_msgs/Clock.h"
 
+AUE4ROSBridgeManager::AUE4ROSBridgeManager()
+{
+	PrimaryActorTick.bCanEverTick = true;
+}
+
 void AUE4ROSBridgeManager::BeginPlay()
 {
 	Super::BeginPlay();
@@ -42,6 +47,8 @@ void AUE4ROSBridgeManager::BeginPlay()
 	// Add topic subscribers and publishers
 	// Add service clients and servers
 	// **** Create publishers here ****
+	TSharedPtr<FROSBridgePublisher> Publisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/clock"), TEXT("rosgraph_msgs/Clock")));
+	ROSHandler->AddPublisher(Publisher);
 
 	// Connect to ROSBridge Websocket server.
 	ROSHandler->Connect();
@@ -54,10 +61,6 @@ void AUE4ROSBridgeManager::PublishReward()
 
 void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 {
-	// TODO: Only support one camera at the beginning
-	// TODO: Make this automatic from material loader.
-	// TODO: Get the list from GTCaptureComponent
-
 	ActorList.Empty();
 	CaptureComponentList.Empty();
 
@@ -138,6 +141,7 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 void AUE4ROSBridgeManager::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	//UE_LOG(LogUnrealCV, Log, TEXT("AUE4ROSBridgeManager::Tick()"));
 	// Do something
 
 //	float GameTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
@@ -146,6 +150,9 @@ void AUE4ROSBridgeManager::Tick(float DeltaSeconds)
 //	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable
 //	(new rosgraph_msgs::Clock(FROSTime(GameSeconds, GameUseconds)));
 //	ROSHandler->PublishMsg("clock", Clock);
+	// publish clock
+	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(GetROSSimTime()));
+	ROSHandler->PublishMsg("/clock", Clock);
 
 	ROSHandler->Process();
 }
@@ -166,7 +173,6 @@ void AUE4ROSBridgeManager::EndPlay(const EEndPlayReason::Type Reason)
 	ROSHandler->Disconnect();
 	// Disconnect the handler before parent ends
 
-	UE_LOG(LogUnrealCV, Warning, TEXT("URemoteMovementComponent::EndPlay()"));
 	GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 0"));
 
 	Super::EndPlay(Reason);

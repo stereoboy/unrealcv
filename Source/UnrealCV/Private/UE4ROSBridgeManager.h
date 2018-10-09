@@ -16,12 +16,24 @@ class UNREALCV_API AUE4ROSBridgeManager : public AActor
 	GENERATED_BODY()
 
 public:
+	AUE4ROSBridgeManager();
+
 	TSharedPtr<FROSBridgeHandler> ROSHandler;
 	TSharedPtr<FROSBridgePublisher> Publisher;
+
 	UFUNCTION(BlueprintCallable, Category="Connnect")
   void PublishReward();
 	UFUNCTION(BlueprintCallable, Category="Connnect")
 	void AttachCaptureComponentToCamera(APawn* Pawn);
+
+	FROSTime GetROSSimTime()
+	{
+		float GameTime = GetWorld()->GetTimeSeconds();
+		uint32 Secs = (uint32)GameTime;
+		uint32 NSecs = (uint32)((GameTime - Secs)*1000000000);
+		return FROSTime(Secs, NSecs);
+	}
+
 private:
 	TArray<UGTCaptureComponent*> CaptureComponentList;
 	TArray<URemoteMovementComponent*> ActorList;

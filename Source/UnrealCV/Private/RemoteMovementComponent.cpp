@@ -2,7 +2,6 @@
 #include "CaptureManager.h"
 #include "RemoteMovementComponent.h"
 #include "UE4ROSBridgeManager.h"
-#include "rosgraph_msgs/Clock.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "tf2_msgs/TFMessage.h"
 #include "sensor_msgs/JointState.h"
@@ -608,10 +607,6 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 
 void URemoteMovementComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	// publish clock
-	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(GetROSSimTime()));
-	ROSHandler->PublishMsg("/clock", Clock);
-
 	ROSPublishOdom(DeltaTime);
 
 	ROSPublishJointState(DeltaTime);
@@ -831,9 +826,6 @@ void URemoteMovementComponent::BeginPlay()
 	// Add topic subscribers and publishers
 	// Add service clients and servers
 	// **** Create publishers here ****
-	TSharedPtr<FROSBridgePublisher> Publisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/clock"), TEXT("rosgraph_msgs/Clock")));
-	ROSHandler->AddPublisher(Publisher);
-
 	TSharedPtr<FROSBridgePublisher> OdomTfPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/tf"), TEXT("tf2_msgs/TFMessage")));
 	ROSHandler->AddPublisher(OdomTfPublisher);
 	TSharedPtr<FROSBridgePublisher> OdomPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/odom"), TEXT("nav_msgs/Odometry")));
