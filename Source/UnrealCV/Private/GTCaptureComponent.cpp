@@ -630,6 +630,11 @@ void UGTCameraCaptureComponent::EndPlay(const EEndPlayReason::Type Reason)
 	ROSHandler->Disconnect();
 	ROSFastHandler->Disconnect();
 	// Disconnect the ROSHandler before parent ends
+	for (auto Elem : CaptureComponents)
+	{
+		Elem.Value->TextureTarget->ConditionalBeginDestroy();
+		Elem.Value->ConditionalBeginDestroy();
+	}
 
 	Super::EndPlay(Reason);
 }
@@ -848,10 +853,12 @@ void UGTCameraCaptureComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTi
 void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 // void UGTCaptureComponent::Tick(float DeltaTime) // This tick function should be called by the scene instead of been
 {
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	// Render pixels out in the next tick. To allow time to render images out.
 
 	// Update rotation of each frame
 	// from ab237f46dc0eee40263acbacbe938312eb0dffbb:CameraComponent.cpp:232
+	UE_LOG(LogUnrealCV, Log, TEXT("UGTCameraCaptureComponent::TickComponent()"));
 	check(this->Pawn); // this GTCapturer should be released, if the Pawn is deleted.
 	check(this->CameraActor);
 	check(this->CameraComponent); // this GTCapturer should be released, if the Pawn is deleted.
