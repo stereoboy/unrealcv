@@ -7,6 +7,10 @@ AUE4ROSBridgeManager::AUE4ROSBridgeManager()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
+/*
+ * https://docs.unrealengine.com/en-us/Programming/UnrealArchitecture/Actors/ActorLifecycle
+ */
+
 void AUE4ROSBridgeManager::BeginPlay()
 {
 	Super::BeginPlay();
@@ -50,13 +54,17 @@ void AUE4ROSBridgeManager::BeginPlay()
 	TSharedPtr<FROSBridgePublisher> Publisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/clock"), TEXT("rosgraph_msgs/Clock")));
 	ROSHandler->AddPublisher(Publisher);
 
+	TSharedPtr<FROSBridgePublisher> RewardPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/status"), TEXT("std_msgs/Float32")));
+	ROSHandler->AddPublisher(RewardPublisher);
+
 	// Connect to ROSBridge Websocket server.
 	ROSHandler->Connect();
 }
 
-void AUE4ROSBridgeManager::PublishReward()
+void AUE4ROSBridgeManager::HandleHit()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, TEXT("[INFO] Publish Reward!"));
+	Status = -1.0f;
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, TEXT("[INFO] Publish Reward!"));
 }
 
 void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
@@ -153,6 +161,10 @@ void AUE4ROSBridgeManager::Tick(float DeltaSeconds)
 	// publish clock
 	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(GetROSSimTime()));
 	ROSHandler->PublishMsg("/clock", Clock);
+
+	TSharedPtr<std_msgs::Float32> status = MakeShareable(new std_msgs::Float32(Status));
+	ROSHandler->PublishMsg("/ue4/status", status);
+	Status = 0.0f;
 
 	ROSHandler->Process();
 }

@@ -22,9 +22,12 @@ public:
 	TSharedPtr<FROSBridgePublisher> Publisher;
 
 	UFUNCTION(BlueprintCallable, Category="Connnect")
-  void PublishReward();
+	void HandleHit();
 	UFUNCTION(BlueprintCallable, Category="Connnect")
 	void AttachCaptureComponentToCamera(APawn* Pawn);
+
+	UPROPERTY(EditAnywhere, Category="Connnect")
+	float Status = 0.0f;
 
 	FROSTime GetROSSimTime()
 	{
