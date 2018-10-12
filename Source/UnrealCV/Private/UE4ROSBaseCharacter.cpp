@@ -20,6 +20,11 @@ void AUE4ROSBaseCharacter::BeginPlay()
 	
 }
 
+void AUE4ROSBaseCharacter::ResetPose_Implementation()
+{
+
+}
+
 // Called every frame
 void AUE4ROSBaseCharacter::Tick(float DeltaTime)
 {

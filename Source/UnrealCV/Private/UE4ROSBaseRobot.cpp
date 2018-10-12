@@ -20,6 +20,11 @@ void AUE4ROSBaseRobot::BeginPlay()
 	
 }
 
+void AUE4ROSBaseRobot::ResetPose_Implementation()
+{
+
+}
+
 // Called every frame
 void AUE4ROSBaseRobot::Tick(float DeltaTime)
 {
