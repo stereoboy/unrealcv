@@ -1,10 +1,41 @@
 #include "UnrealCVPrivate.h"
 #include "UE4ROSBridgeManager.h"
+#include "UE4ROSBaseRobot.h"
+#include "UE4ROSBaseCharacter.h"
 #include "rosgraph_msgs/Clock.h"
 
 AUE4ROSBridgeManager::AUE4ROSBridgeManager()
 {
 	PrimaryActorTick.bCanEverTick = true;
+}
+
+AUE4ROSBridgeManager::FROSResetSubScriber::FROSResetSubScriber(const FString& InTopic,  AUE4ROSBridgeManager* Component) :
+	FROSBridgeSubscriber(InTopic, TEXT("std_msgs/Float32"))
+{
+	this->Component = Component;
+}
+
+AUE4ROSBridgeManager::FROSResetSubScriber::~FROSResetSubScriber()
+{
+};
+
+TSharedPtr<FROSBridgeMsg> AUE4ROSBridgeManager::FROSResetSubScriber::ParseMessage
+(TSharedPtr<FJsonObject> JsonObject) const
+{
+	TSharedPtr<std_msgs::Float32> Float32Message = MakeShareable<std_msgs::Float32>(new std_msgs::Float32());
+	Float32Message->FromJson(JsonObject);
+	return StaticCastSharedPtr<FROSBridgeMsg>(Float32Message);
+}
+
+void AUE4ROSBridgeManager::FROSResetSubScriber::Callback(TSharedPtr<FROSBridgeMsg> InMsg)
+{
+	// downcast to subclass using StaticCastSharedPtr function
+	TSharedPtr<std_msgs::Float32> Float32Message = StaticCastSharedPtr<std_msgs::Float32>(InMsg);
+
+	this->Component->ResetCharacterPoses();
+	UE_LOG(LogUnrealCV, Log, TEXT("Message received! Content: %s"), *Float32Message->ToString());
+
+	return;
 }
 
 /*
@@ -57,6 +88,9 @@ void AUE4ROSBridgeManager::BeginPlay()
 	TSharedPtr<FROSBridgePublisher> RewardPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/status"), TEXT("std_msgs/Float32")));
 	ROSHandler->AddPublisher(RewardPublisher);
 
+	TSharedPtr<FROSResetSubScriber> Subscriber = MakeShareable<FROSResetSubScriber>(new FROSResetSubScriber(TEXT("/ue4/reset"), this));
+	ROSHandler->AddSubscriber(Subscriber);
+
 	// Connect to ROSBridge Websocket server.
 	ROSHandler->Connect();
 }
@@ -65,6 +99,32 @@ void AUE4ROSBridgeManager::HandleHit()
 {
 	Status = -1.0f;
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, TEXT("[INFO] Publish Reward!"));
+}
+
+void SetCharacterInitialPoses(APawn* Pawn, FTransform InitialPlayerPoses, TArray<FTransform> InitialPoses)
+{
+
+}
+
+void AUE4ROSBridgeManager::ResetCharacterPoses()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, TEXT("[INFO] ResetCharacterPoses()"));
+
+	TArray<AActor *> Robots;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUE4ROSBaseRobot::StaticClass(), Robots);
+	for (auto Elem : Robots)
+	{
+		auto Robot = Cast<AUE4ROSBaseRobot>(Elem);
+		Robot->ResetPose();
+	}
+
+	TArray<AActor *> Characters;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUE4ROSBaseCharacter::StaticClass(), Characters);
+	for (auto Elem : Characters)
+	{
+		auto Character = Cast<AUE4ROSBaseCharacter>(Elem);
+		Character->ResetPose();
+	}
 }
 
 void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)

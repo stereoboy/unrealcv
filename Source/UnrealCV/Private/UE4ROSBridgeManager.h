@@ -15,6 +15,16 @@ class UNREALCV_API AUE4ROSBridgeManager : public AActor
 {
 	GENERATED_BODY()
 
+	class FROSResetSubScriber : public FROSBridgeSubscriber
+	{
+		AUE4ROSBridgeManager* Component;
+	public:
+		FROSResetSubScriber(const FString& InTopic, AUE4ROSBridgeManager* Component);
+		~FROSResetSubScriber() override;
+		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
+		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
+	};
+
 public:
 	AUE4ROSBridgeManager();
 
@@ -25,6 +35,10 @@ public:
 	void HandleHit();
 	UFUNCTION(BlueprintCallable, Category="Connnect")
 	void AttachCaptureComponentToCamera(APawn* Pawn);
+	UFUNCTION(BlueprintCallable, Category="Connnect")
+	void SetCharacterInitialPoses(APawn* Pawn, FTransform InitialPlayerPoses, TArray<FTransform> InitialPoses);
+	UFUNCTION(BlueprintCallable, Category="Connnect")
+	void ResetCharacterPoses();
 
 	UPROPERTY(EditAnywhere, Category="Connnect")
 	float Status = 0.0f;
