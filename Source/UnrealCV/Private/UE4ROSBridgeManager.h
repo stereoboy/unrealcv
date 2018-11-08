@@ -29,7 +29,6 @@ public:
 	AUE4ROSBridgeManager();
 
 	TSharedPtr<FROSBridgeHandler> ROSHandler;
-	TSharedPtr<FROSBridgePublisher> Publisher;
 
 	UFUNCTION(BlueprintCallable, Category="Connnect")
 	void HandleHit();
@@ -41,7 +40,13 @@ public:
 	void ResetCharacterPoses();
 
 	UPROPERTY(EditAnywhere, Category="Connnect")
-	float Status = 0.0f;
+	float Reward = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category="Connnect")
+	float EpisodeDone = 0.0f;
+	void SetEpisodeDone(float InEpisodeDone) { EpisodeDone = InEpisodeDone; }
+
+	bool IsHit = false;
 
 	FROSTime GetROSSimTime()
 	{

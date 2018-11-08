@@ -412,7 +412,7 @@ void URemoteMovementComponent::FROSJointStateSubScriber::Callback(TSharedPtr<FRO
 		}
 		if (bSet) {
 			Elem->SetTargetPose(FTransform(FRotator(Pitch, Yaw, 0.0), FVector(0.0, 0.0, Z)));
-			UE_LOG(LogUnrealCV, Log, TEXT("Pitch: %f, Yaw: %f, Z: %f"), Pitch, Yaw, Z);
+			//UE_LOG(LogUnrealCV, Log, TEXT("Pitch: %f, Yaw: %f, Z: %f"), Pitch, Yaw, Z);
 		}
 	}
 	for (auto& Elem : this->Component->JointComponentMap)

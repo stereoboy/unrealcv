@@ -2,6 +2,7 @@
 #include "UE4ROSBridgeManager.h"
 #include "UE4ROSBaseRobot.h"
 #include "UE4ROSBaseCharacter.h"
+#include "geometry_msgs/PolygonStamped.h"
 #include "rosgraph_msgs/Clock.h"
 
 AUE4ROSBridgeManager::AUE4ROSBridgeManager()
@@ -33,6 +34,7 @@ void AUE4ROSBridgeManager::FROSResetSubScriber::Callback(TSharedPtr<FROSBridgeMs
 	TSharedPtr<std_msgs::Float32> Float32Message = StaticCastSharedPtr<std_msgs::Float32>(InMsg);
 
 	this->Component->ResetCharacterPoses();
+	this->Component->SetEpisodeDone(Float32Message->GetData());
 	UE_LOG(LogUnrealCV, Log, TEXT("Message received! Content: %s"), *Float32Message->ToString());
 
 	return;
@@ -69,7 +71,7 @@ void AUE4ROSBridgeManager::BeginPlay()
 	 * MaxFPS Setup is very important on LINUX. If it setup too high value for fast rendering, data order can be mixed up.
 	 *
 	 */
-	UE_LOG(LogUnrealCV, Warning, TEXT("URemoteMovementComponent::BeginPlay()"));
+	UE_LOG(LogUnrealCV, Warning, TEXT("AUE4ROSBridgeManager::BeginPlay()"));
 	// setup for CustomDepthStencil buffer for label images
 	GEngine->Exec(GetWorld(), TEXT("r.CustomDepth 3"));
 	// FPS limitation for publishing stability
@@ -85,7 +87,7 @@ void AUE4ROSBridgeManager::BeginPlay()
 	TSharedPtr<FROSBridgePublisher> Publisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/clock"), TEXT("rosgraph_msgs/Clock")));
 	ROSHandler->AddPublisher(Publisher);
 
-	TSharedPtr<FROSBridgePublisher> RewardPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/status"), TEXT("std_msgs/Float32")));
+	TSharedPtr<FROSBridgePublisher> RewardPublisher = MakeShareable<FROSBridgePublisher>(new FROSBridgePublisher(TEXT("/ue4/status"), TEXT("geometry_msgs/PolygonStamped")));
 	ROSHandler->AddPublisher(RewardPublisher);
 
 	TSharedPtr<FROSResetSubScriber> Subscriber = MakeShareable<FROSResetSubScriber>(new FROSResetSubScriber(TEXT("/ue4/reset"), this));
@@ -97,7 +99,8 @@ void AUE4ROSBridgeManager::BeginPlay()
 
 void AUE4ROSBridgeManager::HandleHit()
 {
-	Status = -1.0f;
+	IsHit = true;
+	Reward = -1.0f;
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, TEXT("[INFO] Publish Reward!"));
 }
 
@@ -134,6 +137,7 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 
 	URemoteMovementComponent* actor = URemoteMovementComponent::Create(FName(TEXT("Main_Actor")), Pawn);
 	ActorList.Add(actor);
+	AddTickPrerequisiteComponent(actor);
 
 	UE_LOG(LogUnrealCV, Log, TEXT("Camera Component List"));
 	TArray<UActorComponent*> cameras = (Pawn->GetComponentsByClass(UCameraComponent::StaticClass()));
@@ -148,6 +152,7 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("main_cam"), TEXT("main_img_link"));
 			CaptureComponentList.Add(camCom);
 			actor->AddCaptureComponent(camCom);
+			AddTickPrerequisiteComponent(camCom);
 		}
 		else if (camera->GetName().Compare(TEXT("RGBDCamRGB")) == 0)
 		{
@@ -156,6 +161,7 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("rgbd_cam"), TEXT("rgbd_rgb_img_link"));
 			CaptureComponentList.Add(camCom);
 			actor->AddCaptureComponent(camCom);
+			AddTickPrerequisiteComponent(camCom);
 		}
 		else if (camera->GetName().Compare(TEXT("RGBDCamDepth")) == 0)
 		{
@@ -164,6 +170,7 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 			camCom->SetUROSBridge(TEXT("/ue4"), TEXT("rgbd_cam"), TEXT("rgbd_depth_img_link"));
 			CaptureComponentList.Add(camCom);
 			actor->AddCaptureComponent(camCom);
+			AddTickPrerequisiteComponent(camCom);
 		}
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetFullName());
 		UE_LOG(LogUnrealCV, Log, TEXT("cameras[%d]: %s"), idx, *camera->GetName());
@@ -209,24 +216,27 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 void AUE4ROSBridgeManager::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	//UE_LOG(LogUnrealCV, Log, TEXT("AUE4ROSBridgeManager::Tick()"));
+	//UE_LOG(LogUnrealCV, Log, TEXT("AUE4ROSBridgeManager::Tick([%d-%d])"), GFrameCounter, GFrameNumber);
+
 	// Do something
 
-//	float GameTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
-//	uint64 GameSeconds = (int)GameTime;
-//	uint64 GameUseconds = (GameTime - GameSeconds) * 1000000000;
-//	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable
-//	(new rosgraph_msgs::Clock(FROSTime(GameSeconds, GameUseconds)));
-//	ROSHandler->PublishMsg("clock", Clock);
 	// publish clock
 	TSharedPtr<rosgraph_msgs::Clock> Clock = MakeShareable(new rosgraph_msgs::Clock(GetROSSimTime()));
 	ROSHandler->PublishMsg("/clock", Clock);
 
-	TSharedPtr<std_msgs::Float32> status = MakeShareable(new std_msgs::Float32(Status));
-	ROSHandler->PublishMsg("/ue4/status", status);
-	Status = 0.0f;
-
 	ROSHandler->Process();
+
+	if (IsHit) {
+		this->ResetCharacterPoses();
+		IsHit = false;
+		EpisodeDone = 1.0;
+	}
+	std_msgs::Header Header(0, GetROSSimTime(), "odom");
+	TArray<geometry_msgs::Point32> Points = {geometry_msgs::Point32(static_cast<float>(GFrameCounter), EpisodeDone, Reward),};
+	TSharedPtr<geometry_msgs::PolygonStamped> status = MakeShareable(new geometry_msgs::PolygonStamped(Header, Points));
+	ROSHandler->PublishMsg("/ue4/status", status);
+	Reward = 0.0f;
+	EpisodeDone = 0.0f;
 }
 
 void AUE4ROSBridgeManager::EndPlay(const EEndPlayReason::Type Reason)
