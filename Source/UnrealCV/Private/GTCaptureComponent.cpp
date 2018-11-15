@@ -432,10 +432,10 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 	}
 }
 
-UGTCameraCaptureComponent::FROSFloat32SubScriber::FROSFloat32SubScriber(const FString& InTopic, UGTCameraCaptureComponent* Component) :
+UGTCameraCaptureComponent::FROSFloat32SubScriber::FROSFloat32SubScriber(const FString& InTopic, UGTCameraCaptureComponent* InComponent) :
 	FROSBridgeSubscriber(InTopic, TEXT("std_msgs/Float32"))
 {
-	this->Component = Component;
+	this->Component = InComponent;
 }
 
 UGTCameraCaptureComponent::FROSFloat32SubScriber::~FROSFloat32SubScriber()

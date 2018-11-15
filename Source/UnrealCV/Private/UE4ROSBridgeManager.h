@@ -19,7 +19,7 @@ class UNREALCV_API AUE4ROSBridgeManager : public AActor
 	{
 		AUE4ROSBridgeManager* Component;
 	public:
-		FROSResetSubScriber(const FString& InTopic, AUE4ROSBridgeManager* Component);
+		FROSResetSubScriber(const FString& InTopic, AUE4ROSBridgeManager* InComponent);
 		~FROSResetSubScriber() override;
 		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
 		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;

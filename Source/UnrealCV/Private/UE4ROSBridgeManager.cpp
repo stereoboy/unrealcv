@@ -10,10 +10,10 @@ AUE4ROSBridgeManager::AUE4ROSBridgeManager()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-AUE4ROSBridgeManager::FROSResetSubScriber::FROSResetSubScriber(const FString& InTopic,  AUE4ROSBridgeManager* Component) :
+AUE4ROSBridgeManager::FROSResetSubScriber::FROSResetSubScriber(const FString& InTopic,  AUE4ROSBridgeManager* InComponent) :
 	FROSBridgeSubscriber(InTopic, TEXT("std_msgs/Float32"))
 {
-	this->Component = Component;
+	this->Component = InComponent;
 }
 
 AUE4ROSBridgeManager::FROSResetSubScriber::~FROSResetSubScriber()

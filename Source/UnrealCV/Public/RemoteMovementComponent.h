@@ -26,7 +26,7 @@ class UNREALCV_API URemoteMovementComponent : public UMovementComponent
 	{
 		URemoteMovementComponent* Component;
 	public:
-		FROSPoseStampedSubScriber(const FString& InTopic, URemoteMovementComponent* Component);
+		FROSPoseStampedSubScriber(const FString& InTopic, URemoteMovementComponent* InComponent);
 		~FROSPoseStampedSubScriber() override;
 		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
 		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
@@ -36,7 +36,7 @@ class UNREALCV_API URemoteMovementComponent : public UMovementComponent
 	{
 		URemoteMovementComponent* Component;
 	public:
-		FROSTwistSubScriber(const FString& InTopic, URemoteMovementComponent* Component);
+		FROSTwistSubScriber(const FString& InTopic, URemoteMovementComponent* InComponent);
 		~FROSTwistSubScriber() override;
 		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
 		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
@@ -47,7 +47,7 @@ class UNREALCV_API URemoteMovementComponent : public UMovementComponent
 		friend class URemoteMovementComponent;
 		URemoteMovementComponent* Component;
 	public:
-		FROSJointStateSubScriber(const FString& InTopic, URemoteMovementComponent* Component);
+		FROSJointStateSubScriber(const FString& InTopic, URemoteMovementComponent* InComponent);
 		~FROSJointStateSubScriber() override;
 		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
 		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;

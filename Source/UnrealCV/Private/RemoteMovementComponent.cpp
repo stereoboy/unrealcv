@@ -275,10 +275,10 @@ TArray<uint8> LabelColorTable =
 	 206, 47, 43, 255,
 };
 
-URemoteMovementComponent::FROSPoseStampedSubScriber::FROSPoseStampedSubScriber(const FString& InTopic,  URemoteMovementComponent* Component) :
+URemoteMovementComponent::FROSPoseStampedSubScriber::FROSPoseStampedSubScriber(const FString& InTopic,  URemoteMovementComponent* InComponent) :
 	FROSBridgeSubscriber(InTopic, TEXT("geometry_msgs/PoseStamped"))
 {
-	this->Component = Component;
+	this->Component = InComponent;
 }
 
 URemoteMovementComponent::FROSPoseStampedSubScriber::~FROSPoseStampedSubScriber()
@@ -309,10 +309,10 @@ void URemoteMovementComponent::FROSPoseStampedSubScriber::Callback(TSharedPtr<FR
 	return;
 }
 
-URemoteMovementComponent::FROSTwistSubScriber::FROSTwistSubScriber(const FString& InTopic,  URemoteMovementComponent* Component) :
+URemoteMovementComponent::FROSTwistSubScriber::FROSTwistSubScriber(const FString& InTopic,  URemoteMovementComponent* InComponent) :
 	FROSBridgeSubscriber(InTopic, TEXT("geometry_msgs/Twist"))
 {
-	this->Component = Component;
+	this->Component = InComponent;
 }
 
 URemoteMovementComponent::FROSTwistSubScriber::~FROSTwistSubScriber()
@@ -359,10 +359,10 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 	return;
 }
 
-URemoteMovementComponent::FROSJointStateSubScriber::FROSJointStateSubScriber(const FString& InTopic, URemoteMovementComponent* Component) :
+URemoteMovementComponent::FROSJointStateSubScriber::FROSJointStateSubScriber(const FString& InTopic, URemoteMovementComponent* InComponent) :
 	FROSBridgeSubscriber(InTopic, TEXT("sensor_msgs/JointState"))
 {
-	this->Component = Component;
+	this->Component = InComponent;
 }
 
 URemoteMovementComponent::FROSJointStateSubScriber::~FROSJointStateSubScriber()

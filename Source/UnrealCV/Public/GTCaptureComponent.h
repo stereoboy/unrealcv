@@ -91,7 +91,7 @@ class UNREALCV_API UGTCameraCaptureComponent : public UGTCaptureComponent // , p
 	{
 		UGTCameraCaptureComponent* Component;
 	public:
-		FROSFloat32SubScriber(const FString& InTopic, UGTCameraCaptureComponent* Component);
+		FROSFloat32SubScriber(const FString& InTopic, UGTCameraCaptureComponent* InComponent);
 		~FROSFloat32SubScriber() override;
 		TSharedPtr<FROSBridgeMsg> ParseMessage(TSharedPtr<FJsonObject> JsonObject) const override;
 		void Callback(TSharedPtr<FROSBridgeMsg> InMsg) override;
