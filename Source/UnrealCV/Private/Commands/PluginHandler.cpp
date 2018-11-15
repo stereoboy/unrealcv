@@ -109,6 +109,6 @@ FExecStatus FPluginCommandHandler::GetVersion(const TArray<FString>& Args)
 
 FExecStatus FPluginCommandHandler::GetSceneName(const TArray<FString>& Args)
 {
-	FString SceneName = FApp::GetGameName();
+	FString SceneName = FApp::GetProjectName();
 	return FExecStatus::OK(SceneName);
 }

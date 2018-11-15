@@ -200,7 +200,7 @@ bool UNetworkManager::StartMessageService(FSocket* ClientSocket, const FIPv4Endp
 
 		UE_LOG(LogUnrealCV, Warning, TEXT("New client connected from %s"), *ClientEndpoint.ToString());
 		// ClientSocket->SetNonBlocking(false); // When this in blocking state, I can not use this socket to send message back
-		FString Confirm = FString::Printf(TEXT("connected to %s"), FApp::GetGameName());
+		FString Confirm = FString::Printf(TEXT("connected to %s"), FApp::GetProjectName());
 		bool IsSent = this->SendMessage(Confirm); // Send a hello message
 		if (!IsSent)
 		{
