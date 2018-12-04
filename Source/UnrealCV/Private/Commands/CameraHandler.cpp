@@ -6,6 +6,7 @@
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "GTCaptureComponent.h"
+#include "GTCameraCaptureComponent.h"
 #include "PlayerViewMode.h"
 #include "UE4CVServer.h"
 #include "CaptureManager.h"
