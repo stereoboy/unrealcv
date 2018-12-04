@@ -1,5 +1,6 @@
 #pragma once
 #include "Object.h"
+#include "GTCameraCaptureComponent.h"
 #include "ROSBridgeHandler.h"
 #include "ROSBridgePublisher.h"
 #include "ROSBridgeSubscriber.h"
