@@ -313,51 +313,6 @@ void UGTCaptureComponent::CaptureFloat16Image(const FString& Mode, TArray<FFloat
 	return;
 }
 
-void UGTCaptureComponent::GetFieldOfView(const FString& Mode, float& FOV)
-{
-	USceneCaptureComponent2D* CaptureComponent = CaptureComponents.FindRef(Mode);
-	if (CaptureComponent == nullptr)
-	{
-		UE_LOG(LogUnrealCV, Warning, TEXT("Can not find a camera to capture %s"), *Mode);
-		return;
-	}
-
-	FOV = CaptureComponent->FOVAngle;
-	return;
-}
-
-void UGTCaptureComponent::SetTargetFieldOfView(const float TargetFOV)
-{
-	this->TargetFOVAngle = FMath::Clamp<float>(TargetFOV, PARAM_MIN_CAM_ZOOM_FOV, PARAM_MAX_CAM_ZOOM_FOV);
-	this->IsZoomToTarget = true;
-}
-
-void UGTCaptureComponent::GetSize(const FString& Mode, int32& Width, int32& Height)
-{
-	USceneCaptureComponent2D* CaptureComponent = CaptureComponents.FindRef(Mode);
-	if (CaptureComponent == nullptr)
-	{
-		UE_LOG(LogUnrealCV, Warning, TEXT("Can not find a camera to capture %s"), *Mode);
-		return;
-	}
-
-	Width = CaptureComponent->TextureTarget->SizeX;
-	Height = CaptureComponent->TextureTarget->SizeY;
-	return;
-}
-
-void UGTCaptureComponent::SetVelocity(const FTransform& InVelocity)
-{
-	this->Velocity = InVelocity;
-	this->MoveAnimCountFromRemote = PARAM_MOVE_ANIM_COUNT;
-}
-
-void UGTCaptureComponent::SetTargetPose(const FTransform& InTargetPose)
-{
-	this->TargetPose = InTargetPose;
-	this->IsMoveToTarget = true;
-}
-
 void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 // void UGTCaptureComponent::Tick(float DeltaTime) // This tick function should be called by the scene instead of been
 {
@@ -370,19 +325,6 @@ void UGTCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 	const AController* OwningController = OwningPawn ? OwningPawn->GetController() : nullptr;
 	if (OwningController && OwningController->IsLocalPlayerController())
 	{
-		if (this->MoveAnimCountFromRemote > 0)
-		{
-			FVector DeltaXYZ = this->Velocity.GetLocation()*DeltaTime;
-			FRotator Rot = this->Velocity.Rotator();
-
-			this->Pawn->AddMovementInput(DeltaXYZ);
-			this->Pawn->AddControllerPitchInput(Rot.Pitch*DeltaTime);
-			this->Pawn->AddControllerYawInput(Rot.Yaw*DeltaTime);
-			this->Pawn->AddControllerRollInput(Rot.Roll*DeltaTime);
-
-			this->MoveAnimCountFromRemote--;
-		}
-
 		const FRotator PawnViewRotation = OwningPawn->GetViewRotation();
 		for (auto Elem : CaptureComponents)
 		{
@@ -569,6 +511,52 @@ UGTCameraCaptureComponent* UGTCameraCaptureComponent::Create(FName Name, APawn* 
 	}
 	UE_LOG(LogUnrealCV, Log, TEXT("%s initialized!"), *GTCapturer->CameraComponent->GetName());
 	return GTCapturer;
+}
+
+void UGTCameraCaptureComponent::GetFieldOfView(const FString& Mode, float& FOV)
+{
+	USceneCaptureComponent2D* CaptureComponent = CaptureComponents.FindRef(Mode);
+	if (CaptureComponent == nullptr)
+	{
+		UE_LOG(LogUnrealCV, Warning, TEXT("Can not find a camera to capture %s"), *Mode);
+		return;
+	}
+
+	FOV = CaptureComponent->FOVAngle;
+	return;
+}
+
+void UGTCameraCaptureComponent::SetTargetFieldOfView(const float TargetFOV)
+{
+	this->TargetFOVAngle = FMath::Clamp<float>(TargetFOV, PARAM_MIN_CAM_ZOOM_FOV, PARAM_MAX_CAM_ZOOM_FOV);
+	this->IsZoomToTarget = true;
+}
+
+void UGTCameraCaptureComponent::GetSize(const FString& Mode, int32& Width, int32& Height)
+{
+	USceneCaptureComponent2D* CaptureComponent = CaptureComponents.FindRef(Mode);
+	if (CaptureComponent == nullptr)
+	{
+		UE_LOG(LogUnrealCV, Warning, TEXT("Can not find a camera to capture %s"), *Mode);
+		return;
+	}
+
+	Width = CaptureComponent->TextureTarget->SizeX;
+	Height = CaptureComponent->TextureTarget->SizeY;
+	return;
+}
+
+void UGTCameraCaptureComponent::SetVelocity(const FTransform& InVelocity)
+{
+	this->Velocity = InVelocity;
+	this->MoveAnimCountFromRemote = PARAM_MOVE_ANIM_COUNT;
+}
+
+void UGTCameraCaptureComponent::SetTargetPose(const FTransform& InTargetPose)
+{
+	this->TargetPose = InTargetPose;
+	this->IsMoveToTarget = true;
+	UE_LOG(LogUnrealCV, Log, TEXT("SetTargetPose(%s)"), *InTargetPose.ToString());
 }
 
 void UGTCameraCaptureComponent::SetUROSBridge(FString InROSNamespace, FString InROSName, FString InROSFrameId)
@@ -853,12 +841,12 @@ void UGTCameraCaptureComponent::ProcessUROSBridge(float DeltaTime, enum ELevelTi
 void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 // void UGTCaptureComponent::Tick(float DeltaTime) // This tick function should be called by the scene instead of been
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	//Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	// Render pixels out in the next tick. To allow time to render images out.
 
 	// Update rotation of each frame
 	// from ab237f46dc0eee40263acbacbe938312eb0dffbb:CameraComponent.cpp:232
-	//UE_LOG(LogUnrealCV, Log, TEXT("UGTCameraCaptureComponent::TickComponent()"));
+	//UE_LOG(LogUnrealCV, Log, TEXT("[%s] UGTCameraCaptureComponent::TickComponent()"), *this->GetName());
 	check(this->Pawn); // this GTCapturer should be released, if the Pawn is deleted.
 	check(this->CameraActor);
 	check(this->CameraComponent); // this GTCapturer should be released, if the Pawn is deleted.
@@ -902,12 +890,14 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 			delta_angular = FRotator(temp.X, temp.Y, temp.Z);
 			new_rot = current.Rotator() + delta_angular;
 			this->CameraComponent->AddRelativeRotation(delta_angular);
-			UE_LOG(LogUnrealCV, Log, TEXT("MoveToTargetPose(%f): (%f %f %f), (%f %f %f)"), DeltaTime, new_loc.X, new_loc.Y, new_loc.Z,
-																						new_rot.Pitch, new_rot.Yaw, new_rot.Roll);
+//			UE_LOG(LogUnrealCV, Log, TEXT("[%s] MoveToTargetPose(%f): %s, %s"), *this->GetName(), DeltaTime, *new_loc.ToString(), *new_rot.ToString());
+//			UE_LOG(LogUnrealCV, Log, TEXT("[%s] loc: %s <-> %s"), *this->GetName(), *new_loc.ToString(), *target.GetLocation().ToString());
+//			UE_LOG(LogUnrealCV, Log, TEXT("[%s] rot: %s <-> %s"), *this->GetName(), *new_rot.ToString(), *target.Rotator().ToString());
 			if (FVector::PointsAreSame(new_loc, target.GetLocation()) && target.Rotator().Equals(new_rot)) {
 				/* arrived at the target destinatoin */
 				this->IsMoveToTarget = false;
 				this->CameraComponent->SetRelativeTransform(target);
+				UE_LOG(LogUnrealCV, Log, TEXT("Done"));
 			}
 		}
 
@@ -919,7 +909,7 @@ void UGTCameraCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick T
 			float delta_fov = delta * direction;
 			float new_fov = current_fov + delta_fov;
 			this->CameraComponent->SetFieldOfView(new_fov);
-			UE_LOG(LogUnrealCV, Log, TEXT("MoveToTargetPose(%f) delta(%f): (%f)->(%f)"), DeltaTime, delta, current_fov, new_fov);
+			//UE_LOG(LogUnrealCV, Log, TEXT("[%s] MoveToTargetPose(%f) delta(%f): (%f)->(%f)"), *this->GetName(), DeltaTime, delta, current_fov, new_fov);
 
 			if (FMath::IsNearlyZero(delta)) {
 				this->IsZoomToTarget = false;

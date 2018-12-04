@@ -189,8 +189,8 @@ FExecStatus FCameraCommandHandler::GetCameraProjMatrix(const TArray<FString>& Ar
 	int32 Width = 0;
 	int32 Height = 0;
 	int32 CameraId = FCString::Atoi(*Args[0]);
-	UGTCaptureComponent* Camera;
-	Camera = FCaptureManager::Get().GetCamera(CameraId);
+	UGTCameraCaptureComponent* Camera;
+	Camera = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
 	if (Camera == nullptr)
 	{
 		return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));
@@ -216,8 +216,8 @@ FExecStatus FCameraCommandHandler::SetCameraProjMatrix(const TArray<FString>& Ar
 		int32 Width = FCString::Atoi(*Args[1]), Height = FCString::Atoi(*Args[2]);
 		float FOV = FCString::Atof(*Args[3]);
 
-		UGTCaptureComponent* Camera;
-		Camera = FCaptureManager::Get().GetCamera(CameraId);
+		UGTCameraCaptureComponent* Camera;
+		Camera = Cast<UGTCameraCaptureComponent>(FCaptureManager::Get().GetCamera(CameraId));
 		if (Camera == nullptr)
 		{
 			return FExecStatus::Error(FString::Printf(TEXT("Invalid camera id %d"), CameraId));

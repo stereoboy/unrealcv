@@ -38,13 +38,6 @@ class UNREALCV_API UGTCaptureComponent : public USceneComponent // , public FTic
 protected:
 	UGTCaptureComponent();
 	APawn* Pawn;
-	FTransform Velocity;
-	int32 MoveAnimCountFromRemote = 0;
-
-	FTransform TargetPose;
-	float TargetFOVAngle;
-	bool IsMoveToTarget = false;
-	bool IsZoomToTarget = false;
 
 public:
 	static UGTCaptureComponent* Create(FName Name, APawn* Pawn, TArray<FString> Modes);
@@ -65,11 +58,6 @@ public:
 
 	void CaptureImage(const FString& Mode, TArray<FColor>& OutImageData, int32& OutWidth, int32& OutHeight);
 	void CaptureFloat16Image(const FString& Mode, TArray<FFloat16Color>& OutImageData, int32& OutWidth, int32& OutHeight);
-	void GetFieldOfView(const FString& Mode, float& FOV);
-	void GetSize(const FString& Mode, int32& Width, int32& Height);
-	void SetVelocity(const FTransform& Velocity);
-	void SetTargetPose(const FTransform& TargetPose);
-	void SetTargetFieldOfView(const float TargetFOV);
 protected:
 	const bool bIsTicking = true;
 
@@ -101,6 +89,14 @@ protected:
 	AActor* CameraActor;
 	UCameraComponent* CameraComponent;
 
+	FTransform Velocity;
+	int32 MoveAnimCountFromRemote = 0;
+
+	FTransform TargetPose;
+	float TargetFOVAngle;
+	bool IsMoveToTarget = false;
+	bool IsZoomToTarget = false;
+
 	// variables for UROSBridge
 	FString ROSNamespace;
 	FString ROSName;
@@ -115,6 +111,12 @@ protected:
 
 public:
 	static UGTCameraCaptureComponent* Create(FName Name, APawn* InPawn, AActor* InCameraActor, UCameraComponent* InCameraComp, TArray<FString> Modes);
+
+	void GetFieldOfView(const FString& Mode, float& FOV);
+	void GetSize(const FString& Mode, int32& Width, int32& Height);
+	void SetVelocity(const FTransform& Velocity);
+	void SetTargetPose(const FTransform& TargetPose);
+	void SetTargetFieldOfView(const float TargetFOV);
 
 	UCameraComponent* GetCameraComponent() { return CameraComponent; }
 	// virtual void Tick(float DeltaTime) override; // TODO
