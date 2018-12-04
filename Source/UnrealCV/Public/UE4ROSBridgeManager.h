@@ -35,8 +35,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Connnect")
 	void AttachCaptureComponentToCamera(APawn* Pawn);
 	UFUNCTION(BlueprintCallable, Category="Connnect")
-	void SetCharacterInitialPoses(APawn* Pawn, FTransform InitialPlayerPoses, TArray<FTransform> InitialPoses);
-	UFUNCTION(BlueprintCallable, Category="Connnect")
 	void ResetCharacterPoses();
 
 	UPROPERTY(EditAnywhere, Category="Connnect")

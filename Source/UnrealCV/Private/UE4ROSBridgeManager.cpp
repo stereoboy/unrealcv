@@ -104,11 +104,6 @@ void AUE4ROSBridgeManager::HandleHit()
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, TEXT("[INFO] Publish Reward!"));
 }
 
-void SetCharacterInitialPoses(APawn* Pawn, FTransform InitialPlayerPoses, TArray<FTransform> InitialPoses)
-{
-
-}
-
 void AUE4ROSBridgeManager::ResetCharacterPoses()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, TEXT("[INFO] ResetCharacterPoses()"));
