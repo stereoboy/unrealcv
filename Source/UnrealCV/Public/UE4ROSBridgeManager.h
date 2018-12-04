@@ -57,7 +57,7 @@ public:
 	}
 
 private:
-	TArray<UGTCaptureComponent*> CaptureComponentList;
+	TArray<UGTCameraCaptureComponent*> CaptureComponentList;
 	TArray<URemoteMovementComponent*> ActorList;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void BeginPlay() override;
