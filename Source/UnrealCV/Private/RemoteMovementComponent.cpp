@@ -1,6 +1,7 @@
 #include "UnrealCVPrivate.h"
 #include "CaptureManager.h"
 #include "RemoteMovementComponent.h"
+#include "UE4ROSBaseCharacter.h"
 #include "UE4ROSBridgeManager.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "tf2_msgs/TFMessage.h"
@@ -702,10 +703,12 @@ void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
 		UE_LOG(LogUnrealCV, Log, TEXT("Initialize SkeletalActorMap"));
 		for (AActor* Actor : FUE4CVServer::Get().GetPawn()->GetLevel()->Actors)
 		{
-			if (Actor && Actor->GetHumanReadableName().Compare(TEXT("Player")))
+			auto Character = Cast<AUE4ROSBaseCharacter>(Actor);
+			if (Character)
 			{
+				UE_LOG(LogUnrealCV, Log, TEXT("SkeletalActor Name=%s"), *Character->GetHumanReadableName());
 				TArray<UMeshComponent*> PaintableComponents;
-				Actor->GetComponents<UMeshComponent>(PaintableComponents);
+				Character->GetComponents<UMeshComponent>(PaintableComponents);
 				if (PaintableComponents.Num() == 0)
 				{
 					continue;
@@ -715,7 +718,7 @@ void URemoteMovementComponent::ROSPublishSkeletalState(float DeltaTime)
 					if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
 					{
 						// TODO
-						SkeletalActorMap.Add(Actor->GetHumanReadableName(), Actor);
+						SkeletalActorMap.Add(Character->GetHumanReadableName(), Character);
 					}
 				}
 			}
