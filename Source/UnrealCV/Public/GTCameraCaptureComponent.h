@@ -1,6 +1,7 @@
 #pragma once
 #include "Object.h"
 #include "UE4CVServer.h"
+#include "Camera/CameraComponent.h"
 #include "GTCaptureComponent.h"
 #include "ROSBridgeHandler.h"
 #include "ROSBridgePublisher.h"
