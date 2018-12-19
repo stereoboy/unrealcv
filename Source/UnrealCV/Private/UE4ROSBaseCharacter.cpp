@@ -20,20 +20,19 @@ void AUE4ROSBaseCharacter::BeginPlay()
 
   TArray<UMeshComponent*> PaintableComponents;
 
-  AActor* Actor = Cast<AActor>(this);
-  Actor->GetComponents<UMeshComponent>(PaintableComponents);
+  this->GetComponents<UMeshComponent>(PaintableComponents);
   for (auto MeshComponent : PaintableComponents)
   {
     if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(MeshComponent))
     {
-      UE_LOG(LogUnrealCV, Log, TEXT("Paint StaticMeshComponent: %s"), *Actor->GetHumanReadableName());
+      UE_LOG(LogUnrealCV, Log, TEXT("Paint StaticMeshComponent: %s"), *this->GetHumanReadableName());
 
       StaticMeshComponent->SetRenderCustomDepth(true);
       StaticMeshComponent->SetCustomDepthStencilValue(0);
     }
     if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
     {
-      UE_LOG(LogUnrealCV, Log, TEXT("Paint SkeletalMeshComponent: %s (%d)"), *Actor->GetHumanReadableName(), LabelColorID);
+      UE_LOG(LogUnrealCV, Log, TEXT("Paint SkeletalMeshComponent: %s (%d)"), *this->GetHumanReadableName(), LabelColorID);
 
       SkeletalMeshComponent->SetRenderCustomDepth(true);
       SkeletalMeshComponent->SetCustomDepthStencilValue(LabelColorID);

@@ -173,7 +173,6 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 	}
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 
-#if 0
 	// Put color for segmentation
 	uint32 ObjectIndex = 1; // 0 for Non-SkeletalMeshComponent
 	for (AActor* Actor : Pawn->GetLevel()->Actors)
@@ -195,19 +194,18 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 					StaticMeshComponent->SetRenderCustomDepth(true);
 					StaticMeshComponent->SetCustomDepthStencilValue(0);
 				}
-				if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
-				{
-					UE_LOG(LogUnrealCV, Log, TEXT("Paint SkeletalMeshComponent: %s (%d)"), *Actor->GetHumanReadableName(), ObjectIndex);
-
-					SkeletalMeshComponent->SetRenderCustomDepth(true);
-					SkeletalMeshComponent->SetCustomDepthStencilValue(ObjectIndex);
-					ObjectIndex = (ObjectIndex + 1)%256;
-				}
+//				if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
+//				{
+//					UE_LOG(LogUnrealCV, Log, TEXT("Paint SkeletalMeshComponent: %s (%d)"), *Actor->GetHumanReadableName(), ObjectIndex);
+//
+//					SkeletalMeshComponent->SetRenderCustomDepth(true);
+//					SkeletalMeshComponent->SetCustomDepthStencilValue(ObjectIndex);
+//					ObjectIndex = (ObjectIndex + 1)%256;
+//				}
 			}
 		}
 	}
 	// end
-#endif
 }
 
 void AUE4ROSBridgeManager::Tick(float DeltaSeconds)
