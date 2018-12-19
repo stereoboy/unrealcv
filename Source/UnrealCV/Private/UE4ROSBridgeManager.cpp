@@ -173,6 +173,7 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 	}
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 
+#if 0
 	// Put color for segmentation
 	uint32 ObjectIndex = 1; // 0 for Non-SkeletalMeshComponent
 	for (AActor* Actor : Pawn->GetLevel()->Actors)
@@ -206,6 +207,7 @@ void AUE4ROSBridgeManager::AttachCaptureComponentToCamera(APawn* Pawn)
 		}
 	}
 	// end
+#endif
 }
 
 void AUE4ROSBridgeManager::Tick(float DeltaSeconds)

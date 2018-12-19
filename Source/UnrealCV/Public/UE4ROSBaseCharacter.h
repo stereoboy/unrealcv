@@ -29,6 +29,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Connnect")
 	void ResetPose();
 
-	
-	
+	UPROPERTY(EditAnywhere)
+	uint32 LabelColorID = 1;
+
 };

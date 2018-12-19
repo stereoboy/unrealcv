@@ -17,7 +17,28 @@ AUE4ROSBaseCharacter::AUE4ROSBaseCharacter()
 void AUE4ROSBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+  TArray<UMeshComponent*> PaintableComponents;
+
+  AActor* Actor = Cast<AActor>(this);
+  Actor->GetComponents<UMeshComponent>(PaintableComponents);
+  for (auto MeshComponent : PaintableComponents)
+  {
+    if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(MeshComponent))
+    {
+      UE_LOG(LogUnrealCV, Log, TEXT("Paint StaticMeshComponent: %s"), *Actor->GetHumanReadableName());
+
+      StaticMeshComponent->SetRenderCustomDepth(true);
+      StaticMeshComponent->SetCustomDepthStencilValue(0);
+    }
+    if (USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(MeshComponent))
+    {
+      UE_LOG(LogUnrealCV, Log, TEXT("Paint SkeletalMeshComponent: %s (%d)"), *Actor->GetHumanReadableName(), LabelColorID);
+
+      SkeletalMeshComponent->SetRenderCustomDepth(true);
+      SkeletalMeshComponent->SetCustomDepthStencilValue(LabelColorID);
+    }
+  }
 }
 
 void AUE4ROSBaseCharacter::ResetPose_Implementation()
