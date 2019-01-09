@@ -25,9 +25,9 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Connnect")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="UE4ROS")
 	void ResetPose();
 
-	
-	
+	UPROPERTY(EditDefaultsOnly, Category="UE4ROS")
+	TMap<FString, FString> JointDescs;
 };

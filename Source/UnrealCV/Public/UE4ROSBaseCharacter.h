@@ -29,7 +29,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Connnect")
 	void ResetPose();
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="UE4ROS")
 	uint32 LabelColorID = 1;
 
 };

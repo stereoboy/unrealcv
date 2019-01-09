@@ -416,14 +416,21 @@ void URemoteMovementComponent::FROSJointStateSubScriber::Callback(TSharedPtr<FRO
 			//UE_LOG(LogUnrealCV, Log, TEXT("Pitch: %f, Yaw: %f, Z: %f"), Pitch, Yaw, Z);
 		}
 	}
-	for (auto& Elem : this->Component->JointComponentMap)
+
+	for (int i = 0; i < Names.Num(); i++)
 	{
-		for (int i = 0; i < Names.Num(); i++)
-		{
-			FString Name = Names[i];
-			double Position = Positions[i];
-			if (Name.Compare(Elem.Key) == 0) {
-				Elem.Value->SetRelativeRotation(FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, 0.0, Position)));
+		FString Name = Names[i];
+		double Position = Positions[i];
+		if (this->Component->JointComponentMap.Contains(Name)) {
+			FString RotationAxis = this->Component->OwningRobot->JointDescs[Name];
+			if (!RotationAxis.Compare("X")) {
+				this->Component->JointComponentMap[Name]->SetRelativeRotation(FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(Position, 0.0, 0.0)));
+			} else if (!RotationAxis.Compare("Y")) {
+				this->Component->JointComponentMap[Name]->SetRelativeRotation(FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, Position, 0.0)));
+			} else if (!RotationAxis.Compare("Z")) {
+				this->Component->JointComponentMap[Name]->SetRelativeRotation(FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, 0.0, Position)));
+			} else {
+				UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d"), *FString(__FUNCTION__), __LINE__);
 			}
 		}
 	}
@@ -457,9 +464,10 @@ void URemoteMovementComponent::Init(void)
 	this->bIsTicking = true;
 
 	// Build Joint Info List
-	const FRegexPattern RegexPattern(TEXT("Robot_Arm_Joint_[0-9]+"));
+	//const FRegexPattern RegexPattern(TEXT("Robot_Arm_Joint_[0-9]+"));
 
 	APawn* OwningPawn = Cast<APawn>(this->GetOwner());
+	this->OwningRobot = Cast<AUE4ROSBaseRobot>(OwningPawn);
 
 	UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
 	TArray<UActorComponent*> joints = (OwningPawn->GetComponentsByClass(UStaticMeshComponent::StaticClass()));
@@ -467,13 +475,15 @@ void URemoteMovementComponent::Init(void)
 	for (int32 idx = 0; idx < joints.Num(); ++idx)
 	{
 		UStaticMeshComponent* joint = Cast<UStaticMeshComponent>(joints[idx]);
-		FRegexMatcher Matcher(RegexPattern, joint->GetName());
+		//FRegexMatcher Matcher(RegexPattern, joint->GetName());
 		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullName():						%s"), idx, *joint->GetFullName());
 		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetName():								%s"), idx, *joint->GetName());
 		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullGroupName(false):	%s"), idx, *joint->GetFullGroupName(false));
-		if (Matcher.FindNext())
+		//if (Matcher.FindNext())
+		if (this->OwningRobot->JointDescs.Contains(joint->GetName()))
 		{
-			FString name = joint->GetName().ToLower();
+			//FString name = joint->GetName().ToLower();
+			FString name = joint->GetName();
 			JointComponentMap.Add(name, joint);
 			UE_LOG(LogUnrealCV, Log, TEXT("-> joint(%s) added"), *name);
 		}
@@ -596,10 +606,25 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 
 	for (auto& Elem : JointComponentMap)
 	{
+		float Roll = 0.0;
+		float Pitch = 0.0;
 		float Yaw = 0.0;
-		Names.Add(Elem.Key);
-		Yaw = Elem.Value->GetRelativeTransform().Rotator().Yaw;
-		Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, Yaw, 0.0)).GetZ());
+
+		FString Name = Elem.Key;
+		Names.Add(Name);
+		FString RotationAxis = this->OwningRobot->JointDescs[Name];
+		if (!RotationAxis.Compare("X")) {
+			Roll = Elem.Value->GetRelativeTransform().Rotator().Roll;
+			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(Roll, 0.0, 0.0)).GetX());
+		} else if (!RotationAxis.Compare("Y")) {
+			Pitch = Elem.Value->GetRelativeTransform().Rotator().Pitch;
+			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, 0.0, Pitch)).GetY());
+		} else if (!RotationAxis.Compare("Z")){
+			Yaw = Elem.Value->GetRelativeTransform().Rotator().Yaw;
+			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, Yaw, 0.0)).GetZ());
+		} else {
+			UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d"), __FUNCTION__, __LINE__);
+		}
 	}
 
 	TSharedPtr<sensor_msgs::JointState> jointstates = MakeShareable(new sensor_msgs::JointState(Header, Names, Positions, Velocities, Efforts));
