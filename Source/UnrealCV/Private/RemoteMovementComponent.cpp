@@ -613,17 +613,19 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 		FString Name = Elem.Key;
 		Names.Add(Name);
 		FString RotationAxis = this->OwningRobot->JointDescs[Name];
+
+		//UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%s-%s"), *FString(__FUNCTION__), *Name, *RotationAxis);
 		if (!RotationAxis.Compare("X")) {
 			Roll = Elem.Value->GetRelativeTransform().Rotator().Roll;
-			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(Roll, 0.0, 0.0)).GetX());
+			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, 0.0, Roll)).GetX());
 		} else if (!RotationAxis.Compare("Y")) {
 			Pitch = Elem.Value->GetRelativeTransform().Rotator().Pitch;
-			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, 0.0, Pitch)).GetY());
+			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(Pitch, 0.0, 0.0)).GetY());
 		} else if (!RotationAxis.Compare("Z")){
 			Yaw = Elem.Value->GetRelativeTransform().Rotator().Yaw;
 			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, Yaw, 0.0)).GetZ());
 		} else {
-			UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d"), __FUNCTION__, __LINE__);
+			UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d"), *FString(__FUNCTION__), __LINE__);
 		}
 	}
 
