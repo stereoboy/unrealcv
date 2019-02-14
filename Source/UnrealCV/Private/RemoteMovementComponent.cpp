@@ -434,39 +434,6 @@ void URemoteMovementComponent::FROSJointStateSubScriber::Callback(TSharedPtr<FRO
 			}
 		}
 	}
-
-	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
-	for (int i = 0; i < Names.Num(); i++)
-	{
-		FString Name = Names[i];
-		double Position = Positions[i];
-		for (auto& Elem:this->Component->ControllableComponentMap)
-		{
-			UPoseableMeshComponent* controllable = Elem.Value.Get<0>();
-			JointInfoMap& BaseJointMap = Elem.Value.Get<1>();
-			if (BaseJointMap.Contains(Name))
-			{
-				FTransform BaseTransform = BaseJointMap[Name];
-				FRotator Rotator;
-				FRotator BaseRotator = BaseTransform.Rotator();
-				FString RotationAxis = this->Component->OwningRobot->JointDescs[Name];
-				if (!RotationAxis.Compare("X")) {
-					Rotator = FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(Position, 0.0, 0.0));
-					// Add (float DeltaPitch, float DeltaYaw, float DeltaRoll)
-				} else if (!RotationAxis.Compare("Y")) {
-					Rotator = FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, Position, 0.0));
-				} else if (!RotationAxis.Compare("Z")) {
-					Rotator = FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(0.0, 0.0, Position));
-				} else {
-					UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d"), *FString(__FUNCTION__), __LINE__);
-				}
-				Rotator += BaseRotator;
-				UE_LOG(LogUnrealCV, Error, TEXT("(%s, %s) %s(%s)"), *Elem.Key, *Name, *RotationAxis, *Rotator.ToString());
-				controllable->SetBoneRotationByName(FName(*Name), Rotator, EBoneSpaces::ComponentSpace);
-			}
-		}
-	}
-	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 }
 
 URemoteMovementComponent::URemoteMovementComponent()
@@ -535,40 +502,6 @@ void URemoteMovementComponent::Init(void)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, TEXT("[INFO] Set Footprint Component!"));
 	}
-
-	//
-	// https://stackoverflow.com/questions/40843416/ue4-how-can-i-set-the-position-of-bones-using-c-only
-	// New Joint System using Skeleton & PoseableMeshComponent
-	UE_LOG(LogUnrealCV, Log, TEXT("Joint-Controllable Component List"));
-	TArray<UActorComponent*> components = (OwningPawn->GetComponentsByClass(UPoseableMeshComponent::StaticClass()));
-	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
-	for (int32 idx = 0; idx < components.Num(); ++idx)
-	{
-		UPoseableMeshComponent* component = Cast<UPoseableMeshComponent>(components[idx]);
-		//FRegexMatcher Matcher(RegexPattern, joint->GetName());
-		UE_LOG(LogUnrealCV, Log, TEXT("controllable[%d]->GetFullName()			%s"), idx, *component->GetFullName());
-		UE_LOG(LogUnrealCV, Log, TEXT("controllable[%d]->GetName():				%s"), idx, *component->GetName());
-		UE_LOG(LogUnrealCV, Log, TEXT("controllable[%d]->GetFullGroupName(false):	%s"), idx, *component->GetFullGroupName(false));
-		
-		FString name = component->GetName();
-		JointInfoMap BaseJointMap;
-		for (auto& Elem : this->OwningRobot->JointDescs)
-		{
-			FString Name = Elem.Key;
-			if (component->GetBoneIndex(FName(*Name)) != INDEX_NONE)
-			{
-				FTransform Transform = component->GetBoneTransformByName(FName(*Name), EBoneSpaces::ComponentSpace);
-				BaseJointMap.Add(Name, Transform);
-
-				UE_LOG(LogUnrealCV, Log, TEXT("-> joint(%s) added"), *name);
-			}
-		}
-		ControllableComponentMap.Add(name, ControllableInfo(component, BaseJointMap));
-		UE_LOG(LogUnrealCV, Log, TEXT("-> component(%s) added"), *name);
-		
-	}
-
-	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 }
 
 void URemoteMovementComponent::SetVelocityCmd(const FTransform& InVelocityCmd)
@@ -693,38 +626,6 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 		} else {
 			UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d"), *FString(__FUNCTION__), __LINE__);
 		}
-	}
-
-	for (auto& Elem:this->ControllableComponentMap)
-	{
-		float Roll = 0.0, Pitch = 0.0, Yaw = 0.0;
-		// check out Runtime/Engine/Private/Components/PoseableMeshComponent.cpp
-		UPoseableMeshComponent* controllable = Elem.Value.Get<0>();
-		JointInfoMap BaseJointMap = Elem.Value.Get<1>();
-
-		for (auto& Joint : BaseJointMap)
-		{
-			FString Name = Joint.Key;
-			FTransform BaseTransform = Joint.Value;
-			Names.Add(Name);
-			FTransform Transform = controllable->GetBoneTransformByName(FName(*Name), EBoneSpaces::ComponentSpace);
-			FRotator Rotator = Transform.Rotator() - BaseTransform.Rotator();
-			FVector Translation = Transform.GetTranslation() - BaseTransform.GetTranslation();
-			FString RotationAxis = this->OwningRobot->JointDescs[Name];
-			if (!RotationAxis.Compare("X")) {
-				Roll = Rotator.Roll;
-				Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, 0.0, Roll)).GetX());
-			} else if (!RotationAxis.Compare("Y")) {
-				Pitch = Rotator.Pitch;
-				Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(Pitch, 0.0, 0.0)).GetY());
-			} else if (!RotationAxis.Compare("Z")) {
-				Yaw = Rotator.Yaw;
-				Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, Yaw, 0.0)).GetZ());
-			} else {
-				UE_LOG(LogUnrealCV, Log, TEXT("%s(...):%d"), *FString(__FUNCTION__), __LINE__);
-			}
-			UE_LOG(LogUnrealCV, Log, TEXT("(%s, %s) %s(%s)"), *Elem.Key, *Name, *RotationAxis, *Rotator.ToString());
-		}	
 	}
 
 	TSharedPtr<sensor_msgs::JointState> jointstates = MakeShareable(new sensor_msgs::JointState(Header, Names, Positions, Velocities, Efforts));

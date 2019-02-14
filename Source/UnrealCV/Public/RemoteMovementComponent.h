@@ -10,7 +10,6 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Point.h"
 #include "std_msgs/ColorRGBA.h"
-#include "Components/PoseableMeshComponent.h"
 #include "RemoteMovementComponent.generated.h"
 
 
@@ -79,9 +78,6 @@ protected:
 	TArray<UGTCameraCaptureComponent*> 		CaptureComponentList;
 	TMap<FString, UStaticMeshComponent*> 	JointComponentMap;
 
-	typedef TMap<FString, FTransform> 		JointInfoMap;
-	typedef TTuple<UPoseableMeshComponent*, JointInfoMap > ControllableInfo;
-	TMap<FString, TTuple<UPoseableMeshComponent*, TMap<FString, FTransform> > >	ControllableComponentMap;
 	AUE4ROSBaseRobot*						OwningRobot;
 
 	UStaticMeshComponent* FootprintComponent;
