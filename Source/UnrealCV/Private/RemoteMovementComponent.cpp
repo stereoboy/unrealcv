@@ -470,15 +470,31 @@ void URemoteMovementComponent::Init(void)
 	this->OwningRobot = Cast<AUE4ROSBaseRobot>(OwningPawn);
 
 	UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
-	TArray<UActorComponent*> joints = (OwningPawn->GetComponentsByClass(UStaticMeshComponent::StaticClass()));
+	TArray<UActorComponent*> meshes = (OwningPawn->GetComponentsByClass(UStaticMeshComponent::StaticClass()));
+	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
+	for (int32 idx = 0; idx < meshes.Num(); ++idx)
+	{
+		UStaticMeshComponent* mesh = Cast<UStaticMeshComponent>(meshes[idx]);
+		UE_LOG(LogUnrealCV, Log, TEXT("mesh[%d]->GetFullName():						%s"), idx, *mesh->GetFullName());
+		UE_LOG(LogUnrealCV, Log, TEXT("mesh[%d]->GetName():							%s"), idx, *mesh->GetName());
+		UE_LOG(LogUnrealCV, Log, TEXT("mesh[%d]->GetFullGroupName(false):			%s"), idx, *mesh->GetFullGroupName(false));
+	
+		if (mesh->GetName() == "Footprint")
+		{
+			FootprintComponent = mesh;
+		}
+	}
+
+	UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
+	TArray<UActorComponent*> joints = (OwningPawn->GetComponentsByClass(USceneComponent::StaticClass()));
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
 	for (int32 idx = 0; idx < joints.Num(); ++idx)
 	{
-		UStaticMeshComponent* joint = Cast<UStaticMeshComponent>(joints[idx]);
+		USceneComponent* joint = Cast<USceneComponent>(joints[idx]);
 		//FRegexMatcher Matcher(RegexPattern, joint->GetName());
 		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullName():						%s"), idx, *joint->GetFullName());
-		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetName():								%s"), idx, *joint->GetName());
-		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullGroupName(false):	%s"), idx, *joint->GetFullGroupName(false));
+		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetName():							%s"), idx, *joint->GetName());
+		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullGroupName(false):				%s"), idx, *joint->GetFullGroupName(false));
 		//if (Matcher.FindNext())
 		if (this->OwningRobot->JointDescs.Contains(joint->GetName()))
 		{
@@ -487,10 +503,36 @@ void URemoteMovementComponent::Init(void)
 			JointComponentMap.Add(name, joint);
 			UE_LOG(LogUnrealCV, Log, TEXT("-> joint(%s) added"), *name);
 		}
+	}
 
-		if (joint->GetName() == "Footprint")
+	UE_LOG(LogUnrealCV, Log, TEXT("Traverse Child Actors"));
+	TArray<UActorComponent*> children = (OwningPawn->GetComponentsByClass(UChildActorComponent::StaticClass()));
+	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
+	for (int32 idx = 0; idx < children.Num(); ++idx)
+	{
+		UChildActorComponent* child = Cast<UChildActorComponent>(children[idx]);
+		UE_LOG(LogUnrealCV, Log, TEXT("children[%d]->GetFullName():						%s"), idx, *child->GetFullName());
+		UE_LOG(LogUnrealCV, Log, TEXT("children[%d]->GetName():							%s"), idx, *child->GetName());
+		UE_LOG(LogUnrealCV, Log, TEXT("children[%d]->GetFullGroupName(false):			%s"), idx, *child->GetFullGroupName(false));
+
+		AActor *ChildActor = child->GetChildActor(); 
+		UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
+		TArray<UActorComponent*> joints = (ChildActor->GetComponentsByClass(USceneComponent::StaticClass()));
+		UE_LOG(LogUnrealCV, Log, TEXT("\t====================================================================="));
+		for (int32 idx = 0; idx < joints.Num(); ++idx)
 		{
-			FootprintComponent = joint;
+			USceneComponent* joint = Cast<USceneComponent>(joints[idx]);
+			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetFullName():						%s"), idx, *joint->GetFullName());
+			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetName():							%s"), idx, *joint->GetName());
+			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetFullGroupName(false):			%s"), idx, *joint->GetFullGroupName(false));
+
+			if (this->OwningRobot->JointDescs.Contains(joint->GetName()))
+			{
+				//FString name = joint->GetName().ToLower();
+				FString name = joint->GetName();
+				JointComponentMap.Add(name, joint);
+				UE_LOG(LogUnrealCV, Log, TEXT("-> joint(%s) added"), *name);
+			}
 		}
 	}
 

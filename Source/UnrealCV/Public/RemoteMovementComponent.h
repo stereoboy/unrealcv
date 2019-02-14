@@ -76,7 +76,7 @@ protected:
 	TSharedPtr<FROSBridgeHandler> ROSHandler;
 
 	TArray<UGTCameraCaptureComponent*> 		CaptureComponentList;
-	TMap<FString, UStaticMeshComponent*> 	JointComponentMap;
+	TMap<FString, USceneComponent*> 	JointComponentMap;
 
 	AUE4ROSBaseRobot*						OwningRobot;
 
