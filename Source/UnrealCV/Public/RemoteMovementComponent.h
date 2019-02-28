@@ -2,7 +2,6 @@
 #include "Object.h"
 #include "GameFramework/MovementComponent.h"
 #include "GTCameraCaptureComponent.h"
-#include "UE4ROSBaseRobot.h"
 #include "ROSBridgeHandler.h"
 #include "ROSBridgePublisher.h"
 #include "ROSBridgeSubscriber.h"
@@ -78,9 +77,9 @@ protected:
 	TArray<UGTCameraCaptureComponent*> 		CaptureComponentList;
 	TMap<FString, USceneComponent*> 	JointComponentMap;
 
-	AUE4ROSBaseRobot*						OwningRobot;
+	TMap<FString, FString> JointDescs;
 
-	UStaticMeshComponent* FootprintComponent;
+	USceneComponent* FootprintComponent;
 
 public:
 	static URemoteMovementComponent* Create(FName Name, APawn* Pawn);

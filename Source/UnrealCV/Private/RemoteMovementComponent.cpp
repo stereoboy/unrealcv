@@ -1,6 +1,8 @@
 #include "UnrealCVPrivate.h"
 #include "CaptureManager.h"
 #include "RemoteMovementComponent.h"
+#include "UE4ROSBaseRobot.h"
+#include "UE4ROSBaseRobotPawn.h"
 #include "UE4ROSBaseCharacter.h"
 #include "UE4ROSBridgeManager.h"
 #include "geometry_msgs/TransformStamped.h"
@@ -352,8 +354,8 @@ void URemoteMovementComponent::FROSTwistSubScriber::Callback(TSharedPtr<FROSBrid
 	float Factor = 1.0;
 	GlobalLinear.ToDirectionAndLength(Direction, Norm);
 
-	FTransform Vel = FTransform(Angular, Direction*Norm*Factor);
-	//FTransform Vel = FTransform(Angular, Linear);
+	//FTransform Vel = FTransform(Angular, Direction*Norm*Factor);
+	FTransform Vel = FTransform(Angular, Linear);
 	this->Component->SetVelocityCmd(Vel);
 
 	UE_LOG(LogUnrealCV, Log, TEXT("Transform: (%f %f %f), (%f %f %f)"), Linear.X, Linear.Y, Linear.Z, Angular.Roll, Angular.Pitch, Angular.Yaw);
@@ -422,7 +424,7 @@ void URemoteMovementComponent::FROSJointStateSubScriber::Callback(TSharedPtr<FRO
 		FString Name = Names[i];
 		double Position = Positions[i];
 		if (this->Component->JointComponentMap.Contains(Name)) {
-			FString RotationAxis = this->Component->OwningRobot->JointDescs[Name];
+			FString RotationAxis = this->Component->JointDescs[Name];
 			if (!RotationAxis.Compare("X")) {
 				this->Component->JointComponentMap[Name]->SetRelativeRotation(FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(Position, 0.0, 0.0)));
 			} else if (!RotationAxis.Compare("Y")) {
@@ -467,8 +469,23 @@ void URemoteMovementComponent::Init(void)
 	//const FRegexPattern RegexPattern(TEXT("Robot_Arm_Joint_[0-9]+"));
 
 	APawn* OwningPawn = Cast<APawn>(this->GetOwner());
-	this->OwningRobot = Cast<AUE4ROSBaseRobot>(OwningPawn);
+	AUE4ROSBaseRobot*		OwningRobot = Cast<AUE4ROSBaseRobot>(OwningPawn);
+	AUE4ROSBaseRobotPawn*	OwningRobotPawn = Cast<AUE4ROSBaseRobotPawn>(OwningPawn);
 
+	if (OwningRobot||!OwningRobotPawn)
+	{
+		JointDescs = OwningRobot->JointDescs;
+	}
+	else if (!OwningRobot||OwningRobotPawn)
+	{
+		JointDescs = OwningRobotPawn->JointDescs;
+	}
+	else
+	{
+		UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d OwningPawn Casting Failed!"), *FString(__FUNCTION__), __LINE__);
+		return;
+	}
+/*
 	UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
 	TArray<UActorComponent*> meshes = (OwningPawn->GetComponentsByClass(UStaticMeshComponent::StaticClass()));
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
@@ -484,7 +501,7 @@ void URemoteMovementComponent::Init(void)
 			FootprintComponent = mesh;
 		}
 	}
-
+*/
 	UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
 	TArray<UActorComponent*> joints = (OwningPawn->GetComponentsByClass(USceneComponent::StaticClass()));
 	UE_LOG(LogUnrealCV, Log, TEXT("====================================================================="));
@@ -496,12 +513,17 @@ void URemoteMovementComponent::Init(void)
 		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetName():							%s"), idx, *joint->GetName());
 		UE_LOG(LogUnrealCV, Log, TEXT("joint[%d]->GetFullGroupName(false):				%s"), idx, *joint->GetFullGroupName(false));
 		//if (Matcher.FindNext())
-		if (this->OwningRobot->JointDescs.Contains(joint->GetName()))
+		if (JointDescs.Contains(joint->GetName()))
 		{
 			//FString name = joint->GetName().ToLower();
 			FString name = joint->GetName();
 			JointComponentMap.Add(name, joint);
 			UE_LOG(LogUnrealCV, Log, TEXT("-> joint(%s) added"), *name);
+		}
+
+		if (joint->GetName() == "Footprint")
+		{
+			FootprintComponent = joint;
 		}
 	}
 
@@ -517,16 +539,16 @@ void URemoteMovementComponent::Init(void)
 
 		AActor *ChildActor = child->GetChildActor(); 
 		UE_LOG(LogUnrealCV, Log, TEXT("Sub Joint Component List"));
-		TArray<UActorComponent*> joints = (ChildActor->GetComponentsByClass(USceneComponent::StaticClass()));
+		TArray<UActorComponent*> subjoints = (ChildActor->GetComponentsByClass(USceneComponent::StaticClass()));
 		UE_LOG(LogUnrealCV, Log, TEXT("\t====================================================================="));
-		for (int32 idx = 0; idx < joints.Num(); ++idx)
+		for (int32 subidx = 0; subidx < subjoints.Num(); ++subidx)
 		{
-			USceneComponent* joint = Cast<USceneComponent>(joints[idx]);
-			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetFullName():						%s"), idx, *joint->GetFullName());
-			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetName():							%s"), idx, *joint->GetName());
-			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetFullGroupName(false):			%s"), idx, *joint->GetFullGroupName(false));
+			USceneComponent* joint = Cast<USceneComponent>(subjoints[subidx]);
+			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetFullName():						%s"), subidx, *joint->GetFullName());
+			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetName():							%s"), subidx, *joint->GetName());
+			UE_LOG(LogUnrealCV, Log, TEXT("\tjoint[%d]->GetFullGroupName(false):			%s"), subidx, *joint->GetFullGroupName(false));
 
-			if (this->OwningRobot->JointDescs.Contains(joint->GetName()))
+			if (JointDescs.Contains(joint->GetName()))
 			{
 				//FString name = joint->GetName().ToLower();
 				FString name = joint->GetName();
@@ -539,6 +561,7 @@ void URemoteMovementComponent::Init(void)
 	if (!FootprintComponent)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("[ERROR] No Footprint Component!"));
+		UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d No Footprint Component!"), *FString(__FUNCTION__), __LINE__);
 	}
 	else
 	{
@@ -560,6 +583,7 @@ void URemoteMovementComponent::ROSPublishOdom(float DeltaTime)
 	if (!FootprintComponent)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("[ERROR] No Footprint Component!"));
+		UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d No Footprint Component!"), *FString(__FUNCTION__), __LINE__);
 		return;
 	}
 	FTransform Transform = FootprintComponent->GetRelativeTransform()*OwningPawn->GetActorTransform();
@@ -653,14 +677,36 @@ void URemoteMovementComponent::ROSPublishJointState(float DeltaTime)
 
 		FString Name = Elem.Key;
 		Names.Add(Name);
-		FString RotationAxis = this->OwningRobot->JointDescs[Name];
+		FString RotationAxis = JointDescs[Name];
 
 		//UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%s-%s"), *FString(__FUNCTION__), *Name, *RotationAxis);
 		if (!RotationAxis.Compare("X")) {
 			Roll = Elem.Value->GetRelativeTransform().Rotator().Roll;
 			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(0.0, 0.0, Roll)).GetX());
 		} else if (!RotationAxis.Compare("Y")) {
-			Pitch = Elem.Value->GetRelativeTransform().Rotator().Pitch;
+/*
+			if (!Name.Compare("wrist_3_joint"))
+			{
+				UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d - [%s] %s"), *FString(__FUNCTION__), __LINE__, *Name, *Elem.Value->GetRelativeTransform().ToString());
+				UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d - GetAngle=%f"), *FString(__FUNCTION__), __LINE__, FMath::RadiansToDegrees(Elem.Value->GetRelativeTransform().GetRotation().GetAngle()));
+				UE_LOG(LogUnrealCV, Error, TEXT("%s(...):%d - GetRotationAxis()=%s"), *FString(__FUNCTION__), __LINE__, *Elem.Value->GetRelativeTransform().GetRotation().GetRotationAxis().ToString());
+			}
+*/
+			Pitch = FMath::RadiansToDegrees(Elem.Value->GetRelativeTransform().GetRotation().GetAngle());
+			float RotationAxisY = Elem.Value->GetRelativeTransform().GetRotation().GetRotationAxis().Y;
+			if (RotationAxisY < 0) {
+				// Do nothing
+			} else {
+				Pitch = -Pitch;
+			}
+
+			// Put values within range (-180, 180)
+			if (Pitch > 180) {
+				Pitch = - 360 + Pitch;
+			} else if (Pitch < -180) {
+				Pitch = 360 + Pitch;
+			}
+
 			Positions.Add(FROSHelper::ConvertEulerAngleUE4ToROS(FRotator(Pitch, 0.0, 0.0)).GetY());
 		} else if (!RotationAxis.Compare("Z")){
 			Yaw = Elem.Value->GetRelativeTransform().Rotator().Yaw;
@@ -872,14 +918,28 @@ void URemoteMovementComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 	{
 		if (this->MoveAnimCountFromRemote > 0)
 		{
-			FVector DeltaXYZ = this->VelocityCmd.GetLocation()*DeltaTime*UE4ROS_LINEAR_MOVEMENT_SCALE_FACTOR;
-			FRotator Rot = this->VelocityCmd.Rotator()*UE4ROS_ANGULAR_MOVEMENT_SCALE_FACTOR;
+			AUE4ROSBaseRobot*		OwningRobot = Cast<AUE4ROSBaseRobot>(OwningPawn);
+			AUE4ROSBaseRobotPawn*	OwningRobotPawn = Cast<AUE4ROSBaseRobotPawn>(OwningPawn);
+			if (OwningRobot)
+			{
+				FVector DeltaXYZ = this->VelocityCmd.GetLocation()*DeltaTime*UE4ROS_LINEAR_MOVEMENT_SCALE_FACTOR;
+				FRotator Rot = this->VelocityCmd.Rotator()*UE4ROS_ANGULAR_MOVEMENT_SCALE_FACTOR;
 
-			OwningPawn->AddMovementInput(DeltaXYZ);
-			OwningPawn->AddControllerPitchInput(Rot.Pitch*DeltaTime);
-			OwningPawn->AddControllerYawInput(Rot.Yaw*DeltaTime);
-			OwningPawn->AddControllerRollInput(Rot.Roll*DeltaTime);
+				OwningPawn->AddMovementInput(DeltaXYZ);
+				OwningPawn->AddControllerPitchInput(Rot.Pitch*DeltaTime);
+				OwningPawn->AddControllerYawInput(Rot.Yaw*DeltaTime);
+				OwningPawn->AddControllerRollInput(Rot.Roll*DeltaTime);
+			}
+			else if (OwningRobotPawn)
+			{
+				FVector MoveForwardVec 	= this->VelocityCmd.GetLocation()*DeltaTime;
+				FRotator TurnRightRot 	= this->VelocityCmd.Rotator()*DeltaTime;
 
+				UE_LOG(LogUnrealCV, Error, TEXT("this->VelocityCmd: %s"), *this->VelocityCmd.ToString());
+
+				FTransform Transform = FTransform(TurnRightRot, MoveForwardVec)*OwningPawn->GetActorTransform();
+				OwningPawn->SetActorTransform(Transform);
+			}
 			this->MoveAnimCountFromRemote--;
 		}
 

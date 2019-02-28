@@ -116,6 +116,14 @@ void AUE4ROSBridgeManager::ResetCharacterPoses()
 		Robot->ResetPose();
 	}
 
+	TArray<AActor *> RobotPawns;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUE4ROSBaseRobotPawn::StaticClass(), RobotPawns);
+	for (auto Elem : RobotPawns)
+	{
+		auto Robot = Cast<AUE4ROSBaseRobotPawn>(Elem);
+		Robot->ResetPose();
+	}
+
 	TArray<AActor *> Characters;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUE4ROSBaseCharacter::StaticClass(), Characters);
 	for (auto Elem : Characters)

@@ -30,4 +30,17 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="UE4ROS")
 	TMap<FString, FString> JointDescs;
+
+	// Movement 
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Movement")
+	float MoveForwardBaseSpeed;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Movement")
+	FVector MoveForwardVector;
+
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Movement")
+	float TurnRightBaseSpeed;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Movement")
+	FRotator TurnRightRotator;
 };
