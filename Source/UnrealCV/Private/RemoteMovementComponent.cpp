@@ -425,6 +425,7 @@ void URemoteMovementComponent::FROSJointStateSubScriber::Callback(TSharedPtr<FRO
 		double Position = Positions[i];
 		if (this->Component->JointComponentMap.Contains(Name)) {
 			FString RotationAxis = this->Component->JointDescs[Name];
+			Position = FMath::Clamp(Position, (double)this->Component->JointLimitMins[Name], (double)this->Component->JointLimitMaxs[Name]);
 			if (!RotationAxis.Compare("X")) {
 				this->Component->JointComponentMap[Name]->SetRelativeRotation(FROSHelper::ConvertEulerAngleROSToUE4(geometry_msgs::Vector3(Position, 0.0, 0.0)));
 			} else if (!RotationAxis.Compare("Y")) {
@@ -479,6 +480,8 @@ void URemoteMovementComponent::Init(void)
 	else if (!OwningRobot||OwningRobotPawn)
 	{
 		JointDescs = OwningRobotPawn->JointDescs;
+		JointLimitMins = OwningRobotPawn->JointLimitMins;
+		JointLimitMaxs = OwningRobotPawn->JointLimitMaxs;
 	}
 	else
 	{

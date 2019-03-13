@@ -78,6 +78,8 @@ protected:
 	TMap<FString, USceneComponent*> 	JointComponentMap;
 
 	TMap<FString, FString> JointDescs;
+	TMap<FString, float> JointLimitMins;
+	TMap<FString, float> JointLimitMaxs;
 
 	USceneComponent* FootprintComponent;
 

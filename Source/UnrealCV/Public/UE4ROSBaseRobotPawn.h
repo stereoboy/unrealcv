@@ -31,6 +31,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="UE4ROS")
 	TMap<FString, FString> JointDescs;
 
+	UPROPERTY(EditDefaultsOnly, Category="UE4ROS")
+	TMap<FString, float> JointLimitMins;
+
+	UPROPERTY(EditDefaultsOnly, Category="UE4ROS")
+	TMap<FString, float> JointLimitMaxs;
+
 	// Movement 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Movement")
 	float MoveForwardBaseSpeed;
